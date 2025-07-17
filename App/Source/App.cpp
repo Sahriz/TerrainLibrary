@@ -1,6 +1,19 @@
 #include "Core/Core.h"
 
-int main()
-{
-	Core::PrintHelloWorld();
-}
+class App {
+	public:
+	App() {
+		// Constructor code here
+	}
+	void Run() {
+		// Main application logic here
+		
+		Core::PrintHelloWorld();
+	}
+	~App() {
+		// Cleanup code here
+	}
+
+	private:
+
+};
