@@ -5,19 +5,29 @@ project "App"
    targetdir "Binaries/%{cfg.buildcfg}"
    staticruntime "off"
 
-   files { "Source/**.h", "Source/**.cpp" }
+   files { "Source/**.h", "Source/**.cpp"}
 
    includedirs
    {
       "Source",
 
 	  -- Include Core
-	  "../Core/Source"
+	  "../Core/Source",
+      "../Vendor/glfw/include",
+      "../Vendor/Glad/include",
+      "../Vendor/imgui",
+      "../Vendor/imgui/backends",
+      "../Vendor/glfw/backends",
    }
 
    links
    {
-      "Core"
+      "Core",
+      "GLFW",
+      "Glad",
+      "ImGui",
+      "opengl32.lib"
+
    }
 
    targetdir ("../Binaries/" .. OutputDir .. "/%{prj.name}")

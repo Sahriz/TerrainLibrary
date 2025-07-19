@@ -1,5 +1,5 @@
 -- premake5.lua
-workspace "New Project"
+workspace "TerrainLibrary"
    architecture "x64"
    configurations { "Debug", "Release", "Dist" }
    startproject "App"
@@ -15,3 +15,9 @@ group "Core"
 group ""
 
 include "App/Build-App.lua"
+
+include "Vendor/glfw/Build-glfw.lua"
+
+include "Vendor/Glad/Build-Glad.lua"
+
+include "Vendor/imgui/Build-imgui.lua"
