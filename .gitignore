@@ -13,5 +13,22 @@ build/
 *.log
 Makefile
 
+# Visual Studio clutter
+_ReSharper*
+*.sdf
+*.suo
+*.dir
+*.vcxproj*
+*.sln
+.vs
+CMakeSettings.json
+Win32
+x64
+Debug
+Release
+MinSizeRel
+RelWithDebInfo
+*.opensdf
+
 # Exclude
 !Vendor/Binaries
