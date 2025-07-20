@@ -6,11 +6,13 @@ project "App"
    staticruntime "off"
    systemversion "latest"
 
-   files { "Source/**.h", "Source/**.cpp"}
+   files { "Source/**.h", "Source/**.cpp", "Include/**.h"}
 
    includedirs
    {
       "Source",
+      "Include",
+       "../Vendor/glm",
 
 	  -- Include Core
 	  "../Core/Source",

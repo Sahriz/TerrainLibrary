@@ -1,16 +1,7 @@
-#include <GLFW/glfw3.h>      // must come before glad
-#include <glad/glad.h>
+#include "App.h"
 
-#include "Core/Core.h"
-#include "imgui.h"
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_opengl3.h"
 
-#include <iostream>
-
-class App {
-	public:
-	App() {
+	App::App() {
 		// Constructor code here
 		// Initialize GLFW
 		if (!glfwInit()) {
@@ -22,7 +13,7 @@ class App {
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	}
-    void Run() {
+    void App::Run() {
        
 		
         // Create GLFW window
@@ -35,6 +26,7 @@ class App {
 
         glfwMakeContextCurrent(window);
         glfwSwapInterval(1); // Enable vsync
+
 
         // Load OpenGL with glad
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -52,6 +44,9 @@ class App {
         ImGui_ImplOpenGL3_Init("#version 410");
 
         // Main loop
+        float scaleStartValue = 1.0f;
+        float frequencyStartValue = 1.0f;
+        int octaveStartValue = 1;
         while (!glfwWindowShouldClose(window)) {
 
             glfwPollEvents();
@@ -62,14 +57,17 @@ class App {
 
             ImGui::Begin("Hello, ImGui!");
             ImGui::Text("This is a text widget.");
+            ImGui::SliderFloat("NoiseScale", &scaleStartValue, 0.001f, 5.0f);
+            ImGui::SliderFloat("FrequencyScale", &frequencyStartValue, 0.001f, 5.0f);
+            ImGui::SliderInt("Octaves", &octaveStartValue, 0, 10);
             if (ImGui::Button("Click Me")) {
                 std::cout << "Button clicked!\n";
+                std::cout << scaleStartValue;
+                UpdateStartValues(scaleStartValue, frequencyStartValue, octaveStartValue);
             }
+            
             ImGui::End();
-
-
-
-
+            
             ImGui::Render();
             int display_w, display_h;
             glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -90,8 +88,5 @@ class App {
         glfwTerminate();
     }
 
-    ~App() {}
 
-	private:
 
-};
