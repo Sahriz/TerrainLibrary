@@ -6,12 +6,13 @@ project "App"
    staticruntime "off"
    systemversion "latest"
 
-   files { "Source/**.h", "Source/**.cpp", "Include/**.h"}
+   files { "Source/**.h", "Source/**.cpp", "Include/**.h", "Shaders/shader.frag", "Shaders/shader.vert"}
 
    includedirs
    {
       "Source",
       "Include",
+      "Shaders",
        "../Vendor/glm",
 
 	  -- Include Core
