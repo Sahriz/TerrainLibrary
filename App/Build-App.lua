@@ -3,7 +3,8 @@ project "App"
    language "C++"
    cppdialect "C++20"
    targetdir "Binaries/%{cfg.buildcfg}"
-   staticruntime "on"
+   staticruntime "off"
+   systemversion "latest"
 
    files { "Source/**.h", "Source/**.cpp"}
 

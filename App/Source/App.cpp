@@ -24,7 +24,7 @@ class App {
 	}
     void Run() {
        
-
+		
         // Create GLFW window
         GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui Window", nullptr, nullptr);
         if (!window) {
@@ -62,7 +62,13 @@ class App {
 
             ImGui::Begin("Hello, ImGui!");
             ImGui::Text("This is a text widget.");
+            if (ImGui::Button("Click Me")) {
+                std::cout << "Button clicked!\n";
+            }
             ImGui::End();
+
+
+
 
             ImGui::Render();
             int display_w, display_h;
