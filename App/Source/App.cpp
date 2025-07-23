@@ -88,7 +88,7 @@
     {-0.5f,  0.5f,  0.5f}  // 7
         };
 
-        std::vector<unsigned int> cubeIndices = {
+        std::vector<int> cubeIndices = {
             // Front face
             4, 5, 6,
             6, 7, 4,
@@ -116,8 +116,8 @@
 
         int width = 1280, height = 720;
         // Vertex data
-        createPerspectiveMatrix(glm::radians(80.0f), width/height, 0.1f, 1000.0f, 0.5f, -0.5f, 0.5f, -0.5f);
-        
+        //createPerspectiveMatrix(glm::radians(80.0f), width/height, 0.1f, 1000.0f, 0.5f, -0.5f, 0.5f, -0.5f);
+		_perspectiveMat = glm::perspective(glm::radians(80.0f), static_cast<float>(width) / static_cast<float>(height), 0.1f, 1000.0f);
 		
         // Create GLFW window
         GLFWwindow* window = glfwCreateWindow(width, height, "ImGui Window", nullptr, nullptr);
@@ -150,7 +150,7 @@
         
 		//Vertex buffer setup
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, planeMesh.vertices.size()*sizeof(glm::fvec3), planeMesh.vertices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, planeMesh.vertices.size() * sizeof(glm::vec3), planeMesh.vertices.data(), GL_STATIC_DRAW);
 
 		//Index buffer setup
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -191,12 +191,14 @@
         GLint heightLocation = glGetUniformLocation(shaderProgram, "Height");
         GLint timeLocation = glGetUniformLocation(shaderProgram, "Time");
         GLint projMLocation = glGetUniformLocation(shaderProgram, "projM");
+		GLuint modelMLocation = glGetUniformLocation(shaderProgram, "uModel");
         GLint viewLoc = glGetUniformLocation(shaderProgram, "uView");
         
         
         glUniform1f(widthLocation, width);
         glUniform1f(heightLocation, height);
         glUniformMatrix4fv(projMLocation, 1, GL_FALSE, glm::value_ptr(_perspectiveMat));
+		glUniformMatrix4fv(modelMLocation, 1, GL_FALSE, glm::value_ptr(glm::translate(identity,glm::vec3(2.0f,0.0f,-2.0f))));
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
 
@@ -219,7 +221,7 @@
             float fps = 1 / deltaTime;
             camera.HandleKeyboardInput(deltaTime, window);
             view = camera.GetViewMatrix();
-            glUniformMatrix4fv(viewLoc, 1, GL_TRUE, glm::value_ptr(view));
+            glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		    std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
 			//std::cout << "FPS: " << fps << std::endl << std::flush;
             glUniform1f(timeLocation, timeValue);

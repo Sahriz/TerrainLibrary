@@ -43,13 +43,13 @@ namespace Core {
 
 				// First triangle
 				indices.push_back(v0);
-				indices.push_back(v1);
 				indices.push_back(v2);
+				indices.push_back(v1);
 
 				// Second triangle
 				indices.push_back(v1);
-				indices.push_back(v3);
 				indices.push_back(v2);
+				indices.push_back(v3);
 			}
 		}
 
@@ -109,6 +109,14 @@ namespace Core {
 
 		glDeleteShader(shader); // Safe to delete after linking
 		return program;
+	}
+
+	void ApplyHeightMapCPU(PlaneMesh& planeData) {
+
+		for(glm::fvec3& point : planeData.vertices) {
+			// Apply some height map logic here, for example, a simple sine wave
+			point.y = point.y + 0.1f * sin(point.x * 0.1f) + 0.1f * cos(point.z * 0.1f);
+		}
 	}
 
 	void ApplyHeightMap(PlaneMesh& planeData) {

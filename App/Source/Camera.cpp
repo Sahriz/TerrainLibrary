@@ -17,6 +17,8 @@ void Camera::HandleKeyboardInput(float deltaTime, GLFWwindow* window) {
 		_cameraPos += glm::normalize(glm::cross(_cameraFront, _cameraUp)) * cameraSpeed;
 	if( glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 		_cameraPos += cameraSpeed * _cameraUp;
+	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+		_cameraPos -= cameraSpeed * _cameraUp;
 }
 
 void Camera::ProcessMouseMovement(GLFWwindow* window, double xpos, double ypos)
@@ -45,7 +47,7 @@ void Camera::ProcessMouseMovement(GLFWwindow* window, double xpos, double ypos)
 
 	// recalculate _cameraFront
 	glm::vec3 direction;
-	direction.x = -cos(glm::radians(_yaw)) * cos(glm::radians(_pitch));
+	direction.x = cos(glm::radians(_yaw)) * cos(glm::radians(_pitch));
 	direction.y = 0;
 	direction.z = sin(glm::radians(_yaw)) * cos(glm::radians(_pitch));
 	_cameraFront = glm::normalize(direction);
