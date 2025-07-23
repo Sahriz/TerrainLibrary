@@ -26,30 +26,59 @@
         return buffer.str();
     }
     // Shader loading helpers
-    GLuint App::compileShader(GLenum type, const char* src) {
+    GLuint App::compileShader(GLenum type, const std::string& source) {
         GLuint shader = glCreateShader(type);
+        const char* src = source.c_str();
         glShaderSource(shader, 1, &src, nullptr);
         glCompileShader(shader);
+
+        GLint success;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+        if (!success) {
+            GLint logLength;
+            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+            std::vector<char> log(logLength);
+            glGetShaderInfoLog(shader, logLength, nullptr, log.data());
+            std::cerr << "Shader compile error:\n" << log.data() << "\n";
+            glDeleteShader(shader);
+            return 0;
+        }
+
         return shader;
     }
 
-    GLuint App::createShaderProgramFromFiles(const std::string& vertPath, const std::string& fragPath) {
-        std::string vertSource = readFile(vertPath);
-        std::string fragSource = readFile(fragPath);
-        const char* vSrc = vertSource.c_str();
-        const char* fSrc = fragSource.c_str();
+    GLuint App::createShaderProgram(const std::string& vertexPath, const std::string& fragmentPath) {
+        std::string vertexSource = readFile(vertexPath);
+        std::string fragmentSource = readFile(fragmentPath);
 
-        GLuint vs = compileShader(GL_VERTEX_SHADER, vSrc);
-        GLuint fs = compileShader(GL_FRAGMENT_SHADER, fSrc);
+        GLuint vertShader = compileShader(GL_VERTEX_SHADER, vertexSource);
+        if (vertShader == 0) return 0;
+
+        GLuint fragShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
+        if (fragShader == 0) {
+            glDeleteShader(vertShader);
+            return 0;
+        }
+
         GLuint program = glCreateProgram();
-        glAttachShader(program, vs);
-        glAttachShader(program, fs);
+        glAttachShader(program, vertShader);
+        glAttachShader(program, fragShader);
         glLinkProgram(program);
 
-        // Optional: check for linking errors here
+        GLint success;
+        glGetProgramiv(program, GL_LINK_STATUS, &success);
+        if (!success) {
+            GLint logLength;
+            glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
+            std::vector<char> log(logLength);
+            glGetProgramInfoLog(program, logLength, nullptr, log.data());
+            std::cerr << "Shader program link error:\n" << log.data() << "\n";
+            glDeleteProgram(program);
+            program = 0;
+        }
 
-        glDeleteShader(vs);
-        glDeleteShader(fs);
+        glDeleteShader(vertShader);
+        glDeleteShader(fragShader);
         return program;
     }
 
@@ -132,37 +161,49 @@
         Camera camera = Camera(window);
         glfwSetWindowUserPointer(window, &camera);
         glfwSetCursorPosCallback(window, mouse_callback);
-
+        glfwWindowHint(GLFW_DEPTH_BITS, 24);
         
         const GLubyte* version = glGetString(GL_VERSION);
-        std::cout << "OpenGL Version: " << version << std::endl;
+        //std::cout << "OpenGL Version: " << version << std::endl;
         
         Core::PlaneMesh planeMesh = Core::CreatePlaneMesh(100, 100);
-        Core::ApplyHeightMap(planeMesh);
-
-        GLuint VAO, VBO, EBO;
+        Core::ApplyHeightMapCPU(planeMesh, 100, 100);
+        
+        GLuint VAO, VBO, VBONormals, EBO;
 
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
+        glGenBuffers(1, &VBONormals);
         glGenBuffers(1, &EBO);
-
+        
+        
         glBindVertexArray(VAO);
         
 		//Vertex buffer setup
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, planeMesh.vertices.size() * sizeof(glm::vec3), planeMesh.vertices.data(), GL_STATIC_DRAW);
-
+        glBufferData(GL_ARRAY_BUFFER, planeMesh.vertices.size() * sizeof(glm::fvec3), planeMesh.vertices.data(), GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::fvec3), (void*)0);
+		//Normal buffer setup
+        
+        glBindBuffer(GL_ARRAY_BUFFER, VBONormals);
+		glBufferData(GL_ARRAY_BUFFER, planeMesh.normals.size() * sizeof(glm::fvec3), planeMesh.normals.data(), GL_STATIC_DRAW);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::fvec3), (void*)0);
 		//Index buffer setup
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, planeMesh.indices.size() * sizeof(int), planeMesh.indices.data(), GL_STATIC_DRAW);
+        
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::fvec3), (void*)0);
-        glEnableVertexAttribArray(0);
+        glBindVertexArray(0);
+   
+       
+        
 
-		glBindVertexArray(0);
+	
 
-        GLuint shaderProgram = createShaderProgramFromFiles("Shaders/shader.vert", "Shaders/shader.frag");
-
+        GLuint shaderProgram = createShaderProgram("Shaders/shader.vert", "Shaders/shader.frag");
+        
         // Load OpenGL with glad
         if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
             // handle error
@@ -185,22 +226,29 @@
         identity[3][3] = 1.0f;
 
         glm::mat4 view = glm::translate(identity, glm::vec3(0.0f, 5.0f, 0.0f));
-        
+        glm::mat4 model = glm::translate(identity, glm::vec3(0.0f, -2.0f, 0.0f));
+		glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)));
+        GLenum err;
         glUseProgram(shaderProgram);
+        while ((err = glGetError()) != GL_NO_ERROR) {
+            std::cerr << "OpenGL error: " << std::hex << err << "\n";
+        }
         GLint widthLocation = glGetUniformLocation(shaderProgram, "Width");
         GLint heightLocation = glGetUniformLocation(shaderProgram, "Height");
         GLint timeLocation = glGetUniformLocation(shaderProgram, "Time");
         GLint projMLocation = glGetUniformLocation(shaderProgram, "projM");
 		GLuint modelMLocation = glGetUniformLocation(shaderProgram, "uModel");
         GLint viewLoc = glGetUniformLocation(shaderProgram, "uView");
+		GLint normalMatrixLocation = glGetUniformLocation(shaderProgram, "normalMatrix");
         
         
         glUniform1f(widthLocation, width);
         glUniform1f(heightLocation, height);
         glUniformMatrix4fv(projMLocation, 1, GL_FALSE, glm::value_ptr(_perspectiveMat));
-		glUniformMatrix4fv(modelMLocation, 1, GL_FALSE, glm::value_ptr(glm::translate(identity,glm::vec3(2.0f,0.0f,-2.0f))));
+		glUniformMatrix4fv(modelMLocation, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-
+		glUniformMatrix3fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+        
 
         // Main loop
         float scaleStartValue = 1.0f;
@@ -210,6 +258,7 @@
 		float persistanceStartValue = 0.5f;
 		float prevTime = 0.0f;
         glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
         while (!glfwWindowShouldClose(window)) {
 
             glfwPollEvents();
@@ -222,7 +271,7 @@
             camera.HandleKeyboardInput(deltaTime, window);
             view = camera.GetViewMatrix();
             glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		    std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
+		    //std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
 			//std::cout << "FPS: " << fps << std::endl << std::flush;
             glUniform1f(timeLocation, timeValue);
             
@@ -251,9 +300,11 @@
             glfwGetFramebufferSize(window, &display_w, &display_h);
             glViewport(0, 0, display_w, display_h);
             glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             //glUseProgram(shaderProgram);
+
             glBindVertexArray(VAO);
+            
             glDrawElements(GL_TRIANGLES, planeMesh.indices.size(), GL_UNSIGNED_INT, 0);
 
 
@@ -266,6 +317,7 @@
         glDeleteProgram(shaderProgram);
         glDeleteVertexArrays(1, &VAO);
         glDeleteBuffers(1, &VBO);
+		glDeleteBuffers(1, &VBONormals);
         glDeleteBuffers(1, &EBO);
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();

@@ -4,7 +4,7 @@
 #define PI 3.1415
 
 layout(std430, binding = 0) buffer VertexBuffer {
-    vec3 positions[];
+    float positions[];
 };
 
 layout(local_size_x = 64) in;
@@ -49,12 +49,18 @@ float pNoise(vec2 p, int res){
 }
 
 void main(){
-	uint id = gl_GlobalInvocationID.x;
-	if(id >= positions.length()) return;
 
-	vec3 pos = positions[id];
+	uint id = gl_GlobalInvocationID.x;
+	if(id*3 >= positions.length()) return;
+
+	uint base = id * 3;
+	vec3 pos = vec3(positions[base + 0], positions[base + 1], positions[base + 2]);
 	vec2 posPlane = pos.xz;
-	float noiseValue = pNoise(posPlane * 100.0f, 5);
+
+	float noiseValue = pNoise(posPlane * 25.0f, 5);
 	pos.y = noiseValue;
-	positions[id] = pos;
+
+	
+	positions[base + 1] = 10*pos.y;
+	
 }

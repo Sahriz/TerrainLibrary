@@ -26,9 +26,9 @@ public:
 
     std::string readFile(const std::string& filePath);
 
-    GLuint compileShader(GLenum type, const char* src);
+    GLuint compileShader(GLenum type, const std::string& source);
 
-    GLuint createShaderProgramFromFiles(const std::string& vertPath, const std::string& fragPath);
+    GLuint createShaderProgram(const std::string& vertexPath, const std::string& fragmentPath);
 
     void createPerspectiveMatrix(float fov, float aspect, float near, float far, float right, float left, float top, float bottom);
 

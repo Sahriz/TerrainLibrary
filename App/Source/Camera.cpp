@@ -6,7 +6,7 @@ glm::mat4 Camera::GetViewMatrix()
 }
 
 void Camera::HandleKeyboardInput(float deltaTime, GLFWwindow* window) {
-	float cameraSpeed = 2.5f * deltaTime;
+	float cameraSpeed = 15.0f * deltaTime;
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 		_cameraPos += cameraSpeed * _cameraFront;
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
