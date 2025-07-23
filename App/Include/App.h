@@ -8,12 +8,18 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 
+#include "vector"
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <iomanip>
 
 #include "glm.hpp"
+#include "matrix_transform.hpp"
+#include "type_ptr.hpp"
+
+#include "Camera.h"
 class App {
 public:
     App();
@@ -24,6 +30,8 @@ public:
 
     GLuint createShaderProgramFromFiles(const std::string& vertPath, const std::string& fragPath);
 
+    void createPerspectiveMatrix(float fov, float aspect, float near, float far, float right, float left, float top, float bottom);
+
 
     void Run();
 
@@ -33,6 +41,7 @@ private:
     float _scaleStartValue;
     float _frequencyStartValue;
     int _octaveStartValue;
+    glm::mat4 _perspectiveMat;
 
 
     void UpdateStartValues(float scale, float frequency, int octaves){

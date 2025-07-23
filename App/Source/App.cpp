@@ -1,4 +1,4 @@
-#include "App.h"
+﻿#include "App.h"
 
 
 	App::App() {
@@ -10,7 +10,7 @@
 
 		// Set OpenGL version
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	}
 
@@ -53,19 +53,75 @@
         return program;
     }
 
+    void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+        Camera* cam = static_cast<Camera*>(glfwGetWindowUserPointer(window));
+        if (cam) {
+            cam->ProcessMouseMovement(window, xpos, ypos);
+        }
+    }
+
+    void App::createPerspectiveMatrix(float fov, float aspect, float near, float far, float right, float left, float top, float bottom) {
+        float f = 1.0f / std::tan(fov / 2.0f);
+
+
+        _perspectiveMat = glm::mat4(0.0f);
+
+        _perspectiveMat[0][0] = 2.0f*near/(right-left);
+		_perspectiveMat[2][0] = (right + left) / (right - left);
+        _perspectiveMat[1][1] = 2.0f*near/(top-bottom);
+		_perspectiveMat[2][1] = (top + bottom) / (top - bottom);
+        _perspectiveMat[2][2] = -(far + near) / (far - near);
+        _perspectiveMat[3][2] = -(2 * far * near) / (far - near);
+        _perspectiveMat[2][3] = -1.0f;
+    }
+
     void App::Run() {
        
+        std::vector<glm::vec3> cubeVertices = {
+    {-0.5f, -0.5f, -0.5f}, // 0
+    { 0.5f, -0.5f, -0.5f}, // 1
+    { 0.5f,  0.5f, -0.5f}, // 2
+    {-0.5f,  0.5f, -0.5f}, // 3
+    {-0.5f, -0.5f,  0.5f}, // 4
+    { 0.5f, -0.5f,  0.5f}, // 5
+    { 0.5f,  0.5f,  0.5f}, // 6
+    {-0.5f,  0.5f,  0.5f}  // 7
+        };
+
+        std::vector<unsigned int> cubeIndices = {
+            // Front face
+            4, 5, 6,
+            6, 7, 4,
+
+            // Back face
+            1, 0, 3,
+            3, 2, 1,
+
+            // Left face
+            0, 4, 7,
+            7, 3, 0,
+
+            // Right face
+            5, 1, 2,
+            2, 6, 5,
+
+            // Top face
+            3, 7, 6,
+            6, 2, 3,
+
+            // Bottom face
+            0, 1, 5,
+            5, 4, 0
+        };
+
         int width = 1280, height = 720;
         // Vertex data
-        float vertices[] = {
-             0.0f,  1.0f, 0.0f,
-            -1.0f, -1.0f, 0.0f,
-             1.0f, -1.0f, 0.0f
-        };
+        createPerspectiveMatrix(glm::radians(80.0f), width/height, 0.1f, 1000.0f, 0.5f, -0.5f, 0.5f, -0.5f);
+        
+		
         // Create GLFW window
         GLFWwindow* window = glfwCreateWindow(width, height, "ImGui Window", nullptr, nullptr);
         if (!window) {
-            Core::PrintHelloWorld();
             glfwTerminate();
             return;
         }
@@ -73,15 +129,37 @@
         glfwMakeContextCurrent(window);
         gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
-        GLuint VAO, VBO;
+        Camera camera = Camera(window);
+        glfwSetWindowUserPointer(window, &camera);
+        glfwSetCursorPosCallback(window, mouse_callback);
+
+        
+        const GLubyte* version = glGetString(GL_VERSION);
+        std::cout << "OpenGL Version: " << version << std::endl;
+        
+        Core::PlaneMesh planeMesh = Core::CreatePlaneMesh(100, 100);
+        Core::ApplyHeightMap(planeMesh);
+
+        GLuint VAO, VBO, EBO;
+
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
 
         glBindVertexArray(VAO);
+        
+		//Vertex buffer setup
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glBufferData(GL_ARRAY_BUFFER, planeMesh.vertices.size()*sizeof(glm::fvec3), planeMesh.vertices.data(), GL_STATIC_DRAW);
+
+		//Index buffer setup
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, planeMesh.indices.size() * sizeof(int), planeMesh.indices.data(), GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::fvec3), (void*)0);
         glEnableVertexAttribArray(0);
+
+		glBindVertexArray(0);
 
         GLuint shaderProgram = createShaderProgramFromFiles("Shaders/shader.vert", "Shaders/shader.frag");
 
@@ -98,14 +176,28 @@
         ImGuiIO& io = ImGui::GetIO(); (void)io;
         ImGui::StyleColorsDark();
         ImGui_ImplGlfw_InitForOpenGL(window, true);
-        ImGui_ImplOpenGL3_Init("#version 460");
+        ImGui_ImplOpenGL3_Init("#version 430");
 
+        glm::mat4 identity = glm::mat4(0.0f);
+        identity[0][0] = 1.0f;
+        identity[1][1] = 1.0f;
+        identity[2][2] = 1.0f;
+        identity[3][3] = 1.0f;
+
+        glm::mat4 view = glm::translate(identity, glm::vec3(0.0f, 5.0f, 0.0f));
+        
+        glUseProgram(shaderProgram);
         GLint widthLocation = glGetUniformLocation(shaderProgram, "Width");
         GLint heightLocation = glGetUniformLocation(shaderProgram, "Height");
         GLint timeLocation = glGetUniformLocation(shaderProgram, "Time");
-        glUseProgram(shaderProgram);
+        GLint projMLocation = glGetUniformLocation(shaderProgram, "projM");
+        GLint viewLoc = glGetUniformLocation(shaderProgram, "uView");
+        
+        
         glUniform1f(widthLocation, width);
         glUniform1f(heightLocation, height);
+        glUniformMatrix4fv(projMLocation, 1, GL_FALSE, glm::value_ptr(_perspectiveMat));
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
 
         // Main loop
@@ -114,11 +206,22 @@
         int octaveStartValue = 1;
 		float lacunarityStartValue = 2.0f;
 		float persistanceStartValue = 0.5f;
+		float prevTime = 0.0f;
+        glEnable(GL_CULL_FACE);
         while (!glfwWindowShouldClose(window)) {
 
             glfwPollEvents();
-
+			
+			
             float timeValue = glfwGetTime();
+			float deltaTime = timeValue - prevTime;
+			prevTime = timeValue;
+            float fps = 1 / deltaTime;
+            camera.HandleKeyboardInput(deltaTime, window);
+            view = camera.GetViewMatrix();
+            glUniformMatrix4fv(viewLoc, 1, GL_TRUE, glm::value_ptr(view));
+		    std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
+			//std::cout << "FPS: " << fps << std::endl << std::flush;
             glUniform1f(timeLocation, timeValue);
             
             ImGui_ImplOpenGL3_NewFrame();
@@ -147,9 +250,9 @@
             glViewport(0, 0, display_w, display_h);
             glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
-            glUseProgram(shaderProgram);
+            //glUseProgram(shaderProgram);
             glBindVertexArray(VAO);
-            glDrawArrays(GL_TRIANGLES, 0, 3);
+            glDrawElements(GL_TRIANGLES, planeMesh.indices.size(), GL_UNSIGNED_INT, 0);
 
 
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -161,6 +264,7 @@
         glDeleteProgram(shaderProgram);
         glDeleteVertexArrays(1, &VAO);
         glDeleteBuffers(1, &VBO);
+        glDeleteBuffers(1, &EBO);
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
