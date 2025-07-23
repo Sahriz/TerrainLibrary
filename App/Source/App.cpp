@@ -166,8 +166,8 @@
         const GLubyte* version = glGetString(GL_VERSION);
         //std::cout << "OpenGL Version: " << version << std::endl;
         
-        Core::PlaneMesh planeMesh = Core::CreatePlaneMesh(100, 100);
-        Core::ApplyHeightMapCPU(planeMesh, 100, 100);
+        Core::PlaneMesh planeMesh = Core::CreatePlaneMesh(1000, 1000);
+        Core::ApplyHeightMap(planeMesh, 1000, 1000);
         
         GLuint VAO, VBO, VBONormals, EBO;
 
@@ -258,6 +258,7 @@
 		float persistanceStartValue = 0.5f;
 		float prevTime = 0.0f;
         glEnable(GL_CULL_FACE);
+        glEnable(GL_BACK);
         glEnable(GL_DEPTH_TEST);
         while (!glfwWindowShouldClose(window)) {
 

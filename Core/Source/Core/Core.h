@@ -26,5 +26,5 @@ namespace Core {
 	std::string readFile(const std::string& filePath);
 	GLuint CreateComputeShaderProgram(const std::string& path);
 	void ApplyHeightMapCPU(PlaneMesh& planeData, int width, int height);
-	void ApplyHeightMap(PlaneMesh& planeData);
+	void ApplyHeightMap(PlaneMesh& planeData, int width, int height);
 }

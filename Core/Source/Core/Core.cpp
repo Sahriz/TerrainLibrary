@@ -21,14 +21,14 @@ namespace Core {
 		vertices.reserve(width*height); //coordinates (x, y, z)
 		std::vector<glm::fvec3> normals;
 		normals.reserve(width * height); //coordinates (x, y, z)
-		float xScale = 1.f / width/3;
-		float zScale = 1.f / height;
+		float xScale = 100.f / width;
+		float zScale = 100.f / height;
 		for(int z = 0; z < height; ++z) {
 			for(int x = 0; x < width; ++x) {
 				// Calculate the vertex position
-				float posX = static_cast<float>(x-width/2.0f);
+				float posX = static_cast<float>(x-width/2.0f) * xScale;
 				float posY = -0.1;
-				float posZ = static_cast<float>(z-height/2.0f); // Assuming a flat plane at z=0
+				float posZ = static_cast<float>(z-height/2.0f) * zScale; // Assuming a flat plane at z=0
 				//std::cout << posZ << "\n";
 				glm::fvec3 vertex(posX, posY, posZ);
 				// Add the vertex to the vector
@@ -152,7 +152,7 @@ namespace Core {
 		glm::fvec3 value;
 		float padding; // Padding to ensure 16-byte alignment
 	};
-	void ApplyHeightMap(PlaneMesh& planeData) {
+	void ApplyHeightMap(PlaneMesh& planeData, int width, int height) {
 		GLuint ssbo;
 		glGenBuffers(1, &ssbo);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
@@ -177,6 +177,52 @@ namespace Core {
 		}
 		else {
 			std::cerr << "Failed to map SSBO for reading!" << std::endl;
+		}
+		for (int z = 0; z < height; ++z) {
+			for (int x = 0; x < width; ++x) {
+				int v0 = getIndex(x, z, width);
+				int v1 = getIndex(x, z, width);
+				int v2 = getIndex(x, z, width);
+				int v3 = getIndex(x, z, width);
+				if (z > 0) {
+					v0 = getIndex(x, z - 1, width);
+				}
+				if (z < height - 1) {
+					v1 = getIndex(x, z + 1, width);
+				}
+				if (x > 0) {
+					v2 = getIndex(x - 1, z, width);
+				}
+				if (x < width - 1) {
+					v3 = getIndex(x + 1, z, width);
+				}
+
+				glm::vec3 line1 = glm::normalize(planeData.vertices[v1] - planeData.vertices[v0]);
+				glm::vec3 line2 = glm::normalize(planeData.vertices[v3] - planeData.vertices[v2]);
+				glm::vec3 normal = glm::normalize(glm::cross(line1, line2));
+				planeData.normals[getIndex(x, z, width)] = normal; // Assign the normal to the corresponding vertex
+			}
+		}
+
+		for (int i = 0; i < planeData.indices.size(); i += 3) {
+			int i0 = planeData.indices[i];
+			int i1 = planeData.indices[i + 1];
+			int i2 = planeData.indices[i + 2];
+
+			glm::vec3 v0 = planeData.vertices[i0];
+			glm::vec3 v1 = planeData.vertices[i1];
+			glm::vec3 v2 = planeData.vertices[i2];
+
+			glm::vec3 faceNormal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+
+			// Accumulate the face normal into each of the triangle's vertices
+			planeData.normals[i0] += faceNormal;
+			planeData.normals[i1] += faceNormal;
+			planeData.normals[i2] += faceNormal;
+		}
+		// Normalize all vertex normals
+		for (auto& n : planeData.normals) {
+			n = glm::normalize(n);
 		}
 		
 
