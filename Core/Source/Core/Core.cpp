@@ -152,7 +152,9 @@ namespace Core {
 		glm::fvec3 value;
 		float padding; // Padding to ensure 16-byte alignment
 	};
-	void ApplyHeightMap(PlaneMesh& planeData, int width, int height) {
+	
+	
+	void DisplaceVertices(PlaneMesh& planeData, int width, int height) {
 		GLuint ssbo;
 		glGenBuffers(1, &ssbo);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
@@ -171,61 +173,208 @@ namespace Core {
 		glm::fvec3* ptr = (glm::fvec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
 
 		// Copy or use data
-		if (ptr) {
-			planeData.vertices.assign(ptr, ptr + planeData.vertices.size());
-			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		}
-		else {
-			std::cerr << "Failed to map SSBO for reading!" << std::endl;
-		}
-		for (int z = 0; z < height; ++z) {
-			for (int x = 0; x < width; ++x) {
-				int v0 = getIndex(x, z, width);
-				int v1 = getIndex(x, z, width);
-				int v2 = getIndex(x, z, width);
-				int v3 = getIndex(x, z, width);
-				if (z > 0) {
-					v0 = getIndex(x, z - 1, width);
-				}
-				if (z < height - 1) {
-					v1 = getIndex(x, z + 1, width);
-				}
-				if (x > 0) {
-					v2 = getIndex(x - 1, z, width);
-				}
-				if (x < width - 1) {
-					v3 = getIndex(x + 1, z, width);
-				}
 
-				glm::vec3 line1 = glm::normalize(planeData.vertices[v1] - planeData.vertices[v0]);
-				glm::vec3 line2 = glm::normalize(planeData.vertices[v3] - planeData.vertices[v2]);
-				glm::vec3 normal = glm::normalize(glm::cross(line1, line2));
-				planeData.normals[getIndex(x, z, width)] = normal; // Assign the normal to the corresponding vertex
-			}
-		}
-
-		for (int i = 0; i < planeData.indices.size(); i += 3) {
-			int i0 = planeData.indices[i];
-			int i1 = planeData.indices[i + 1];
-			int i2 = planeData.indices[i + 2];
-
-			glm::vec3 v0 = planeData.vertices[i0];
-			glm::vec3 v1 = planeData.vertices[i1];
-			glm::vec3 v2 = planeData.vertices[i2];
-
-			glm::vec3 faceNormal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
-
-			// Accumulate the face normal into each of the triangle's vertices
-			planeData.normals[i0] += faceNormal;
-			planeData.normals[i1] += faceNormal;
-			planeData.normals[i2] += faceNormal;
-		}
-		// Normalize all vertex normals
-		for (auto& n : planeData.normals) {
-			n = glm::normalize(n);
-		}
-		
-
+		planeData.vertices.assign(ptr, ptr + planeData.vertices.size());
+		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 	}
 
+	void InterpolatedNormals(PlaneMesh& planeData, int width, int height){
+		GLuint ssboVertices, ssboNormals;
+		glGenBuffers(1, &ssboVertices);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.vertices.size() * sizeof(glm::fvec3), planeData.vertices.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboVertices);
+
+		glGenBuffers(1, &ssboNormals);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormals);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.normals.size() * sizeof(glm::fvec3), planeData.normals.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboNormals);
+
+		GLuint computeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapNormal.txt");
+
+		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
+		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
+
+		glUseProgram(computeShaderProgram);
+
+		glUniform1i(widthLoc, width);
+		glUniform1i(heightLoc, height);
+
+		GLuint numGroups = (planeData.vertices.size() + 63) / 64;
+		glDispatchCompute(numGroups, 1, 1);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormals);
+		glm::fvec3* ptrNormals = (glm::fvec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+
+		// Copy or use data
+		planeData.normals.assign(ptrNormals, ptrNormals + planeData.normals.size());
+		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+	}
+	
+	void ApplyHeightMap(PlaneMesh& planeData, int width, int height) {
+		
+		
+		DisplaceVertices(planeData, width, height);
+		InterpolatedNormals(planeData, width, height);
+		//CalculateNormalsHeightMap(planeData, width, height);
+
+	}
+	namespace {
+		void CalculateNormalsHeightMap(PlaneMesh& planeData, int width, int height) {
+			//Cases for accumulating normals and getting the average normal per vertex
+			//First case: The vertex is not on the edge of the mesh or the corner. This means it has 6 neighboring triangles. 
+			//Second case: The vertex is on the edge of the mesh, which means it has 3 neighboring triangles.
+			//Third case: The vertex is on the corner of the mesh, which means it has either 1 or 2 neighboring triangles. 
+			// If z and x are both 0 or height-1 and width-1 respectively then there is only one triangle. 
+			// If z is 0 while x is width-1 or vice versa then there are two triangles.
+			//Start with the first case, which is the most common one, then handle the other cases as edge cases (pun intended).
+			for (int z = 0; z < height; ++z) {
+				for (int x = 0; x < width; ++x) {
+
+					//Bottom-left corner
+					if (z == 0 && x == 0) {
+						int v0 = getIndex(x, z, width);
+						int v1 = getIndex(x + 1, z, width);
+						int v2 = getIndex(x, z + 1, width);
+
+						glm::vec3 triNormal = glm::normalize(glm::cross(planeData.vertices[v2] - planeData.vertices[v1], planeData.vertices[v1] - planeData.vertices[v0]));
+
+						glm::vec3 combinedNormal = glm::normalize(triNormal);
+
+						planeData.normals[v0] = combinedNormal;
+					}
+					//Bottom-right corner
+					else if (z == 0 && x == width - 1) {
+						int v0 = getIndex(x, z, width);
+						int v1 = getIndex(x, z + 1, width);
+						int v2 = getIndex(x - 1, z, width);
+						int v3 = getIndex(x - 1, z + 1, width);
+
+						glm::vec3 triNormal1 = glm::normalize(glm::cross(planeData.vertices[v3] - planeData.vertices[v1], planeData.vertices[v1] - planeData.vertices[v0]));
+						glm::vec3 triNormal2 = glm::normalize(glm::cross(planeData.vertices[v2] - planeData.vertices[v3], planeData.vertices[v3] - planeData.vertices[v0]));
+
+						glm::vec3 combinedNormal = glm::normalize(triNormal1 + triNormal2);
+
+						planeData.normals[v0] = combinedNormal;
+
+					}
+					//Top-left corner
+					else if (z == height - 1 && x == 0) {
+						int v0 = getIndex(x, z, width);
+						int v1 = getIndex(x, z - 1, width);
+						int v2 = getIndex(x + 1, z, width);
+						int v3 = getIndex(x + 1, z - 1, width);
+
+						glm::vec3 triNormal1 = glm::normalize(glm::cross(planeData.vertices[v3] - planeData.vertices[v1], (planeData.vertices[v1] - planeData.vertices[v0])));
+						glm::vec3 triNormal2 = glm::normalize(glm::cross(planeData.vertices[v2] - planeData.vertices[v3], planeData.vertices[v3] - planeData.vertices[v0]));
+
+						glm::vec3 combinedNormal = glm::normalize(triNormal1 + triNormal2);
+
+						planeData.normals[v0] = combinedNormal;
+					}
+					//Top-right corner
+					else if (z == height - 1 && x == width - 1) {
+						int v0 = getIndex(x, z, width);
+						int v1 = getIndex(x - 1, z, width);
+						int v2 = getIndex(x, z - 1, width);
+
+						glm::vec3 triNormal = glm::normalize(glm::cross(planeData.vertices[v2] - planeData.vertices[v1], planeData.vertices[v1] - planeData.vertices[v0]));
+
+						glm::vec3 combinedNormal = glm::normalize(triNormal);
+
+						planeData.normals[v0] = combinedNormal;
+					}
+					//Left edge
+					else if (x == 0) {
+						int v0 = getIndex(x, z, width);
+						int v1 = getIndex(x, z - 1, width);
+						int v2 = getIndex(x + 1, z - 1, width);
+						int v3 = getIndex(x + 1, z, width);
+						int v4 = getIndex(x, z + 1, width);
+
+						glm::vec3 triNormal1 = glm::normalize(glm::cross(planeData.vertices[v2] - planeData.vertices[v1], planeData.vertices[v1] - planeData.vertices[v0]));
+						glm::vec3 triNormal2 = glm::normalize(glm::cross(planeData.vertices[v3] - planeData.vertices[v2], planeData.vertices[v2] - planeData.vertices[v0]));
+						glm::vec3 triNormal3 = glm::normalize(glm::cross(planeData.vertices[v4] - planeData.vertices[v3], planeData.vertices[v3] - planeData.vertices[v0]));
+
+						glm::vec3 combinedNormal = glm::normalize(triNormal1 + triNormal2 + triNormal3);
+
+						planeData.normals[v0] = combinedNormal;
+					}
+					//right edge
+					else if (x == width - 1) {
+						int v0 = getIndex(x, z, width);
+						int v1 = getIndex(x, z + 1, width);
+						int v2 = getIndex(x - 1, z + 1, width);
+						int v3 = getIndex(x - 1, z, width);
+						int v4 = getIndex(x, z - 1, width);
+
+						glm::vec3 triNormal1 = glm::normalize(glm::cross(planeData.vertices[v2] - planeData.vertices[v1], planeData.vertices[v1] - planeData.vertices[v0]));
+						glm::vec3 triNormal2 = glm::normalize(glm::cross(planeData.vertices[v3] - planeData.vertices[v2], planeData.vertices[v2] - planeData.vertices[v0]));
+						glm::vec3 triNormal3 = glm::normalize(glm::cross(planeData.vertices[v4] - planeData.vertices[v3], planeData.vertices[v3] - planeData.vertices[v0]));
+
+						glm::vec3 combinedNormal = glm::normalize(triNormal1 + triNormal2 + triNormal3);
+
+						planeData.normals[v0] = combinedNormal;
+					}
+					//bottom edge
+					else if (z == 0) {
+						int v0 = getIndex(x, z, width);
+						int v1 = getIndex(x + 1, z, width);
+						int v2 = getIndex(x, z + 1, width);
+						int v3 = getIndex(x - 1, z + 1, width);
+						int v4 = getIndex(x - 1, z, width);
+
+						glm::vec3 triNormal1 = glm::normalize(glm::cross(planeData.vertices[v2] - planeData.vertices[v1], planeData.vertices[v1] - planeData.vertices[v0]));
+						glm::vec3 triNormal2 = glm::normalize(glm::cross(planeData.vertices[v3] - planeData.vertices[v2], planeData.vertices[v2] - planeData.vertices[v0]));
+						glm::vec3 triNormal3 = glm::normalize(glm::cross(planeData.vertices[v4] - planeData.vertices[v3], planeData.vertices[v3] - planeData.vertices[v0]));
+
+						glm::vec3 combinedNormal = glm::normalize(triNormal1 + triNormal2 + triNormal3);
+
+						planeData.normals[v0] = combinedNormal;
+					}
+					//Top edge
+					else if (z == height - 1) {
+						int v0 = getIndex(x, z, width);
+						int v1 = getIndex(x - 1, z, width);
+						int v2 = getIndex(x, z - 1, width);
+						int v3 = getIndex(x + 1, z - 1, width);
+						int v4 = getIndex(x + 1, z, width);
+
+						glm::vec3 triNormal1 = glm::normalize(glm::cross(planeData.vertices[v2] - planeData.vertices[v1], planeData.vertices[v1] - planeData.vertices[v0]));
+						glm::vec3 triNormal2 = glm::normalize(glm::cross(planeData.vertices[v3] - planeData.vertices[v2], planeData.vertices[v2] - planeData.vertices[v0]));
+						glm::vec3 triNormal3 = glm::normalize(glm::cross(planeData.vertices[v4] - planeData.vertices[v3], planeData.vertices[v3] - planeData.vertices[v0]));
+
+						glm::vec3 combinedNormal = glm::normalize(triNormal1 + triNormal2 + triNormal3);
+
+						planeData.normals[v0] = combinedNormal;
+					}
+					//Normal case
+					else {
+						// Normal case, has 6 neighbors
+						int v0 = getIndex(x, z, width);
+						int v1 = getIndex(x, z + 1, width);
+						int v2 = getIndex(x + 1, z, width);
+						int v3 = getIndex(x + 1, z + 1, width);
+						int v4 = getIndex(x, z - 1, width);
+						int v5 = getIndex(x - 1, z, width);
+						int v6 = getIndex(x - 1, z - 1, width);
+
+						glm::vec3 triNormal1 = glm::normalize(glm::cross(planeData.vertices[v1] - planeData.vertices[v0], planeData.vertices[v2] - planeData.vertices[v0]));
+						glm::vec3 triNormal2 = glm::normalize(glm::cross(planeData.vertices[v2] - planeData.vertices[v3], planeData.vertices[v3] - planeData.vertices[v0]));
+						glm::vec3 triNormal3 = glm::normalize(glm::cross(planeData.vertices[v3] - planeData.vertices[v4], planeData.vertices[v4] - planeData.vertices[v0]));
+						glm::vec3 triNormal4 = glm::normalize(glm::cross(planeData.vertices[v4] - planeData.vertices[v5], planeData.vertices[v5] - planeData.vertices[v0]));
+						glm::vec3 triNormal5 = glm::normalize(glm::cross(planeData.vertices[v5] - planeData.vertices[v6], planeData.vertices[v6] - planeData.vertices[v0]));
+						glm::vec3 triNormal6 = glm::normalize(glm::cross(planeData.vertices[v6] - planeData.vertices[v1], planeData.vertices[v1] - planeData.vertices[v0]));
+
+						glm::vec3 combinedNormal = glm::normalize(triNormal1 + triNormal2 + triNormal3 + triNormal4 + triNormal5 + triNormal6);
+
+						planeData.normals[v0] = combinedNormal;
+					}
+				}
+			}
+
+
+		}
+	}
 }

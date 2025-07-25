@@ -25,6 +25,8 @@
         }
         return buffer.str();
     }
+
+    
     // Shader loading helpers
     GLuint App::compileShader(GLenum type, const std::string& source) {
         GLuint shader = glCreateShader(type);
@@ -272,7 +274,7 @@
             camera.HandleKeyboardInput(deltaTime, window);
             view = camera.GetViewMatrix();
             glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		    //std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
+		    std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
 			//std::cout << "FPS: " << fps << std::endl << std::flush;
             glUniform1f(timeLocation, timeValue);
             

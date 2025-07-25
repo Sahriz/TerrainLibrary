@@ -57,10 +57,9 @@ void main(){
 	vec3 pos = vec3(positions[base + 0], positions[base + 1], positions[base + 2]);
 	vec2 posPlane = pos.xz;
 
-	float noiseValue = pNoise(posPlane * 25.0f, 5);
+	float noiseValue = pNoise(posPlane * 50.0f, 5);
 	pos.y = noiseValue;
 
 	
-	positions[base + 1] = 10*pos.y;
-	
+	positions[base + 1] = 20*pos.y;
 }

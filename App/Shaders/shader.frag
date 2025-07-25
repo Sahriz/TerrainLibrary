@@ -9,8 +9,6 @@ uniform float Time;
 
 out vec4 FragColor;
 
-
-
 void main()
 {
     float ambientStrength = 0.01f;
