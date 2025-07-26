@@ -219,7 +219,7 @@ namespace Core {
 		}
 	}
 	
-	void DisplaceVertices(PlaneMesh& planeData, int width, int height) {
+	void DisplaceVertices(PlaneMesh& planeData, int width, int height, float scale, float amplitude, float frequency, int octaves, float persistance, float lacunarity) {
 		GLuint ssboVertices;
 		if (width * height != planeData.vertices.size()) {
 			std::cout << "wrong sizes!";
@@ -233,11 +233,23 @@ namespace Core {
 
 		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
 		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
+		GLint scaleLoc = glGetUniformLocation(computeShaderProgram, "scale");
+		GLint amplitudeLoc = glGetUniformLocation(computeShaderProgram, "amplitude");
+		GLint frequencyLoc = glGetUniformLocation(computeShaderProgram, "frequency");
+		GLint octavesLoc = glGetUniformLocation(computeShaderProgram, "octaves");
+		GLint persistanceLoc = glGetUniformLocation(computeShaderProgram, "persistance");
+		GLint lacunarityLoc = glGetUniformLocation(computeShaderProgram, "lacunarity");
 
 		glUseProgram(computeShaderProgram);
 
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
+		glUniform1f(scaleLoc, scale);
+		glUniform1f(amplitudeLoc, amplitude);
+		glUniform1f(frequencyLoc, frequency);
+		glUniform1i(octavesLoc, octaves);
+		glUniform1f(persistanceLoc, persistance);
+		glUniform1f(lacunarityLoc, lacunarity);
 
 		GLuint numGroups = ((width * height) + 63) / 64;
 		glDispatchCompute(numGroups, 1, 1);
@@ -297,7 +309,7 @@ namespace Core {
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 	}
 	
-	PlaneMesh GetHeightMapPlane(int width, int height) {
+	PlaneMesh GetHeightMapPlane(int width, int height, float scale, float amplitude, float frequency, int octaves, float persistance, float lacunarity) {
 		PlaneMesh planeData;
 
 		std::vector<glm::fvec3> vertices;
@@ -313,7 +325,7 @@ namespace Core {
 
 		CreateVertices(planeData, width, height);
 		CreateIndices(planeData, width, height);
-		DisplaceVertices(planeData, width, height);
+		DisplaceVertices(planeData, width, height, scale, amplitude, frequency, octaves, persistance, lacunarity);
 		InterpolatedNormals(planeData, width, height);
 		//CalculateNormalsHeightMap(planeData, width, height);
 

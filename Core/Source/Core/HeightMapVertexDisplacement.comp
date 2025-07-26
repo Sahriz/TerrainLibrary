@@ -13,6 +13,12 @@ layout(std430, binding = 0) buffer VertexBuffer {
 
 uniform int width;
 uniform int height;
+uniform float scale;
+uniform float amplitude;
+uniform float frequency;
+uniform int octaves;
+uniform float persistance;
+uniform float lacunarity;
 
 float rand(vec2 n) {
     return fract(sin(dot(n, vec2(127.1, 311.7))) * 43758.5453123);
@@ -33,20 +39,16 @@ float noise(vec2 p, float freq ){
 	return mix(x1, x2, xy.y);
 }
 
-float pNoise(vec2 p, int res){
-	float persistance = 0.5f;
+float pNoise(vec2 p){
 	float n = 0.0f;
 	float normK = 0.0f;
-	float f = 4.0f;
-	float amp = 1.0f;
-	int iCount = 0;
-	for (int i = 0; i<50; i++){
+	float f = frequency;
+	float amp = amplitude;
+	for (int i = 0; i<octaves; i++){
 		n+=amp*noise(p, f);
-		f*=2.0f;
+		f*=lacunarity;
 		normK+=amp;
 		amp*=persistance;
-		if (iCount == res) break;
-		iCount++;
 	}
 	float nf = n/normK;
 	return nf*nf*nf*nf;
@@ -65,7 +67,7 @@ void main(){
 	vec3 pos = getPos(vertexIndex);
 	vec2 vertexPlanePosition = pos.xz;
 
-	float noiseValue = pNoise(vertexPlanePosition * 35.0f, 5);
+	float noiseValue = pNoise(vertexPlanePosition * scale);
 	
 	positions[vertexIndex * 3 + 1] = 20*noiseValue;
 }

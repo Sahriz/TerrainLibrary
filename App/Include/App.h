@@ -24,26 +24,26 @@ class App {
 public:
     App();
 
+    void Run();
+
+    ~App() {}
+
+private:
+    float _scaleStartValue =35.0f;
+	float _amplitudeStartValue = 0.5f;
+    float _frequencyStartValue = 4.0f;
+    int _octaveStartValue = 5;
+    float _lacunarityStartValue = 2.0f;
+    float _persistanceStartValue = 0.5f;
+    glm::mat4 _perspectiveMat;
+
     std::string readFile(const std::string& filePath);
 
     GLuint compileShader(GLenum type, const std::string& source);
 
     GLuint createShaderProgram(const std::string& vertexPath, const std::string& fragmentPath);
 
-    void createPerspectiveMatrix(float fov, float aspect, float near, float far, float right, float left, float top, float bottom);
-
-
-    void Run();
-
-    ~App() {}
-
-private:
-    float _scaleStartValue;
-    float _frequencyStartValue;
-    int _octaveStartValue;
-    glm::mat4 _perspectiveMat;
-
-
+    void updatePlaneMesh(Core::PlaneMesh& planeData);
     void UpdateStartValues(float scale, float frequency, int octaves){
         _scaleStartValue = scale;
         _frequencyStartValue = frequency;
