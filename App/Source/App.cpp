@@ -130,9 +130,8 @@
         const GLubyte* version = glGetString(GL_VERSION);
         //std::cout << "OpenGL Version: " << version << std::endl;
         
-        Core::PlaneMesh planeMesh = Core::CreatePlaneMesh(1000, 1000);
-        Core::ApplyHeightMap(planeMesh, 1000, 1000);
-        
+        Core::PlaneMesh planeMesh = Core::GetHeightMapPlane(1000, 1000);
+
         GLuint VAO, VBO, VBONormals, EBO;
 
         glGenVertexArrays(1, &VAO);
@@ -236,7 +235,7 @@
             camera.HandleKeyboardInput(deltaTime, window);
             view = camera.GetViewMatrix();
             glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		    //std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
+		    std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
 			//std::cout << "FPS: " << fps << std::endl << std::flush;
             glUniform1f(timeLocation, timeValue);
             

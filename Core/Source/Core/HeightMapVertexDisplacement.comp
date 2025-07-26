@@ -65,9 +65,7 @@ void main(){
 	vec3 pos = getPos(vertexIndex);
 	vec2 vertexPlanePosition = pos.xz;
 
-	float noiseValue = pNoise(vertexPlanePosition * 50.0f, 5);
-	pos.y = noiseValue;
-
+	float noiseValue = pNoise(vertexPlanePosition * 35.0f, 5);
 	
 	positions[vertexIndex * 3 + 1] = 20*noiseValue;
 }

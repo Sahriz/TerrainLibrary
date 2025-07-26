@@ -149,18 +149,14 @@ namespace Core {
 		}
 	}
 	
-	
-	void DisplaceVertices(PlaneMesh& planeData, int width, int height) {
-		GLuint ssbo;
-		if (width * height != planeData.vertices.size()) {
-			std::cout << "wrong sizes!";
-		}
-		glGenBuffers(1, &ssbo);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, width*height * 3 * sizeof(float), planeData.vertices.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+	void CreateVertices(PlaneMesh& planeData, int width, int height) {
+		GLuint ssboVertices;
+		glGenBuffers(1, &ssboVertices);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.vertices.size() * 3 * sizeof(float), planeData.vertices.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboVertices);
 
-		GLuint computeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMap.txt");
+		GLuint computeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexInit.comp");
 
 		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
 		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
@@ -174,7 +170,80 @@ namespace Core {
 		glDispatchCompute(numGroups, 1, 1);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
+		glm::fvec3* ptr = (glm::fvec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+
+		// Copy or use data
+		if (ptr) {
+			
+			
+			planeData.vertices.assign(ptr, ptr + planeData.vertices.size());
+			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		}
+		else {
+			std::cout << "Something went wrong in CreateVertices";
+		}
+	}
+
+	void CreateIndices(PlaneMesh& planeData, int width, int height) {
+		GLuint ssboIndices;
+		glGenBuffers(1, &ssboIndices);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndices);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.indices.size() * sizeof(int), planeData.indices.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboIndices);
+
+		GLuint computeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapIndexInit.comp");
+
+		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
+		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
+
+		glUseProgram(computeShaderProgram);
+
+		glUniform1i(widthLoc, width);
+		glUniform1i(heightLoc, height);
+
+		GLuint numGroups = (((width-1) * (height-1)) + 63) / 64;
+		glDispatchCompute(numGroups, 1, 1);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndices);
+		int* ptr = (int*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+
+		// Copy or use data
+		if (ptr) {
+			planeData.indices.assign(ptr, ptr + planeData.indices.size());
+			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		}
+		else {
+			std::cout << "Something went wrong in DisplaceVertices";
+		}
+	}
+	
+	void DisplaceVertices(PlaneMesh& planeData, int width, int height) {
+		GLuint ssboVertices;
+		if (width * height != planeData.vertices.size()) {
+			std::cout << "wrong sizes!";
+		}
+		glGenBuffers(1, &ssboVertices);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.vertices.size() * 3 * sizeof(float), planeData.vertices.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboVertices);
+
+		GLuint computeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexDisplacement.comp");
+
+		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
+		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
+
+		glUseProgram(computeShaderProgram);
+
+		glUniform1i(widthLoc, width);
+		glUniform1i(heightLoc, height);
+
+		GLuint numGroups = ((width * height) + 63) / 64;
+		glDispatchCompute(numGroups, 1, 1);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
 		glm::fvec3* ptr = (glm::fvec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
 
 		// Copy or use data
@@ -183,7 +252,7 @@ namespace Core {
 			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 		}
 		else {
-			std::cout << "xd";
+			std::cout << "Something went wrong in DisplaceVertices";
 		}
 		
 	}
@@ -206,7 +275,7 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, width*height * 3 * sizeof(float), planeData.normals.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboNormals);
 
-		GLuint computeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapNormal.txt");
+		GLuint computeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapNormal.comp");
 
 		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
 		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
@@ -228,11 +297,27 @@ namespace Core {
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 	}
 	
-	void ApplyHeightMap(PlaneMesh& planeData, int width, int height) {
-		
+	PlaneMesh GetHeightMapPlane(int width, int height) {
+		PlaneMesh planeData;
+
+		std::vector<glm::fvec3> vertices;
+		vertices.resize(width * height);
+		std::vector<int> indices;
+		indices.resize((width - 1) * (width - 1) * 6);
+		std::vector<glm::fvec3> normals;
+		normals.resize(width*height);
+
+		planeData.vertices = vertices;
+		planeData.indices = indices;
+		planeData.normals = normals;
+
+		CreateVertices(planeData, width, height);
+		CreateIndices(planeData, width, height);
 		DisplaceVertices(planeData, width, height);
 		InterpolatedNormals(planeData, width, height);
 		//CalculateNormalsHeightMap(planeData, width, height);
+
+		return planeData;
 
 	}
 	namespace {

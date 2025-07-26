@@ -1,0 +1,40 @@
+#version 430 core
+
+layout(local_size_x = 64) in;
+
+layout(std430, binding = 0) buffer indexBuffer{
+	int indices[];
+};
+
+uniform int width;
+uniform int height;
+
+int getIndex(uint x, uint z){
+	return int(x + z * width);
+}
+
+void main(){
+
+	uint vertexIndex = gl_GlobalInvocationID.x;
+
+	uint x = vertexIndex % uint(width);
+	uint z = vertexIndex / uint(width);
+	if(x >= width-1 || z >= height-1) return;
+
+	int v0 = getIndex(x,z);
+	int v1 = getIndex(x+1,z);
+	int v2 = getIndex(x,z+1);
+	int v3 = getIndex(x+1,z+1);
+
+	int base = int(vertexIndex * 6);
+	
+	//Triangle 1
+	indices[base + 0] = v0;
+	indices[base + 1] = v2;
+	indices[base + 2] = v1;
+
+	//Triangle 2
+	indices[base + 3] = v1;
+	indices[base + 4] = v2;
+	indices[base + 5] = v3;
+}
