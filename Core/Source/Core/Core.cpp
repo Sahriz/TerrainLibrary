@@ -148,24 +148,29 @@ namespace Core {
 			}
 		}
 	}
-	struct alignas(16) Vec3Aligned {
-		glm::fvec3 value;
-		float padding; // Padding to ensure 16-byte alignment
-	};
 	
 	
 	void DisplaceVertices(PlaneMesh& planeData, int width, int height) {
 		GLuint ssbo;
+		if (width * height != planeData.vertices.size()) {
+			std::cout << "wrong sizes!";
+		}
 		glGenBuffers(1, &ssbo);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.vertices.size() * sizeof(glm::fvec3), planeData.vertices.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, width*height * 3 * sizeof(float), planeData.vertices.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
 
 		GLuint computeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMap.txt");
 
+		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
+		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
+
 		glUseProgram(computeShaderProgram);
 
-		GLuint numGroups = (planeData.vertices.size() + 63) / 64;
+		glUniform1i(widthLoc, width);
+		glUniform1i(heightLoc, height);
+
+		GLuint numGroups = ((width * height) + 63) / 64;
 		glDispatchCompute(numGroups, 1, 1);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -173,21 +178,32 @@ namespace Core {
 		glm::fvec3* ptr = (glm::fvec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
 
 		// Copy or use data
-
-		planeData.vertices.assign(ptr, ptr + planeData.vertices.size());
-		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		if (ptr) {
+			planeData.vertices.assign(ptr, ptr + planeData.vertices.size());
+			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		}
+		else {
+			std::cout << "xd";
+		}
+		
 	}
 
 	void InterpolatedNormals(PlaneMesh& planeData, int width, int height){
 		GLuint ssboVertices, ssboNormals;
+		if (width * height != planeData.vertices.size()) {
+			std::cout << "wrong sizes!";
+		}
+		if (width * height != planeData.normals.size()) {
+			std::cout << "wrong sizes!";
+		}
 		glGenBuffers(1, &ssboVertices);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.vertices.size() * sizeof(glm::fvec3), planeData.vertices.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, width * height * 3 * sizeof(float), planeData.vertices.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboVertices);
 
 		glGenBuffers(1, &ssboNormals);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormals);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.normals.size() * sizeof(glm::fvec3), planeData.normals.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, width*height * 3 * sizeof(float), planeData.normals.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboNormals);
 
 		GLuint computeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapNormal.txt");
@@ -200,7 +216,7 @@ namespace Core {
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
 
-		GLuint numGroups = (planeData.vertices.size() + 63) / 64;
+		GLuint numGroups = ((width * height) + 63) / 64;
 		glDispatchCompute(numGroups, 1, 1);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -213,7 +229,6 @@ namespace Core {
 	}
 	
 	void ApplyHeightMap(PlaneMesh& planeData, int width, int height) {
-		
 		
 		DisplaceVertices(planeData, width, height);
 		InterpolatedNormals(planeData, width, height);

@@ -107,44 +107,6 @@
     }
 
     void App::Run() {
-       
-        std::vector<glm::vec3> cubeVertices = {
-    {-0.5f, -0.5f, -0.5f}, // 0
-    { 0.5f, -0.5f, -0.5f}, // 1
-    { 0.5f,  0.5f, -0.5f}, // 2
-    {-0.5f,  0.5f, -0.5f}, // 3
-    {-0.5f, -0.5f,  0.5f}, // 4
-    { 0.5f, -0.5f,  0.5f}, // 5
-    { 0.5f,  0.5f,  0.5f}, // 6
-    {-0.5f,  0.5f,  0.5f}  // 7
-        };
-
-        std::vector<int> cubeIndices = {
-            // Front face
-            4, 5, 6,
-            6, 7, 4,
-
-            // Back face
-            1, 0, 3,
-            3, 2, 1,
-
-            // Left face
-            0, 4, 7,
-            7, 3, 0,
-
-            // Right face
-            5, 1, 2,
-            2, 6, 5,
-
-            // Top face
-            3, 7, 6,
-            6, 2, 3,
-
-            // Bottom face
-            0, 1, 5,
-            5, 4, 0
-        };
-
         int width = 1280, height = 720;
         // Vertex data
         //createPerspectiveMatrix(glm::radians(80.0f), width/height, 0.1f, 1000.0f, 0.5f, -0.5f, 0.5f, -0.5f);
@@ -274,7 +236,7 @@
             camera.HandleKeyboardInput(deltaTime, window);
             view = camera.GetViewMatrix();
             glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		    std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
+		    //std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
 			//std::cout << "FPS: " << fps << std::endl << std::flush;
             glUniform1f(timeLocation, timeValue);
             
