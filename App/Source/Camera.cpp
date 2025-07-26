@@ -7,6 +7,14 @@ glm::mat4 Camera::GetViewMatrix()
 
 void Camera::HandleKeyboardInput(float deltaTime, GLFWwindow* window) {
 	float cameraSpeed = 15.0f * deltaTime;
+	int newState = glfwGetKey(window, GLFW_KEY_E);
+	if (newState == GLFW_PRESS && _oldState == GLFW_RELEASE) {
+		UpdateCursorState(window);
+	}
+	_oldState = newState;
+	if (_cursorEnabled) {
+		return;
+	}	
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 		_cameraPos += cameraSpeed * _cameraFront;
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -21,8 +29,22 @@ void Camera::HandleKeyboardInput(float deltaTime, GLFWwindow* window) {
 		_cameraPos -= cameraSpeed * _cameraUp;
 }
 
+void Camera::UpdateCursorState(GLFWwindow* window) {
+	if (_cursorEnabled) {
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		_cursorEnabled = false;
+	}
+	else {
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		_cursorEnabled = true;
+	}
+}
+
 void Camera::ProcessMouseMovement(GLFWwindow* window, double xpos, double ypos)
 {
+	if(_cursorEnabled) {
+		return; // Ignore mouse movement if cursor is not enabled
+	}
 	static float sensitivity = 0.1f;
 
 	if (_firstMouse) {

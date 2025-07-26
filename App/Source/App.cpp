@@ -160,11 +160,6 @@
 
         glBindVertexArray(0);
    
-       
-        
-
-	
-
         GLuint shaderProgram = createShaderProgram("Shaders/shader.vert", "Shaders/shader.frag");
         
         // Load OpenGL with glad

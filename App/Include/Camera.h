@@ -19,6 +19,8 @@ public:
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	}
 
+	void UpdateCursorState(GLFWwindow* window);
+
 	void HandleKeyboardInput(float deltaTime, GLFWwindow* window);
 	
 	void ProcessMouseMovement(GLFWwindow* window, double xpos, double ypos);
@@ -37,4 +39,7 @@ public:
 	float _pitch;
 	float _lastX, _lastY;
 	bool _firstMouse;
+
+	bool _cursorEnabled = false;
+	int _oldState = GLFW_RELEASE;
 };
