@@ -14,7 +14,9 @@ group "Core"
 	include "Core/Build-Core.lua"
 group ""
 
-include "App/Build-App.lua"
+include "HeightMapDemo/Build-HeightMapDemo.lua"
+
+include "ChunkDemo/Build-ChunkDemo.lua"
 
 include "Vendor/glfw/Build-glfw.lua"
 

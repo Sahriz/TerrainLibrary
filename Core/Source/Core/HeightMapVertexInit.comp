@@ -21,9 +21,9 @@ void main(){
 	float xScale = 100.0f/width;
 	float zScale = 100.0f/height;
 
-	float xPos = (x - width/2.0f)*xScale;
+	float xPos = x*xScale;
 	float yPos = 0;
-	float zPos = (z - height/2.0f)*zScale;
+	float zPos = z*zScale;
 
 	positions[vertexIndex*3] = xPos;
 	positions[vertexIndex*3 + 1] = yPos;
