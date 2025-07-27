@@ -25,7 +25,7 @@ float rand(vec2 n) {
 }
 
 float noise(vec2 p, float freq ){
-	float unit = screenWidth / freq; //TODO: Fix so that uniform screenWidth = 1280 instead of hardcoded like now
+	float unit = 1.0f / freq; //TODO: Fix so that uniform screenWidth = 1280 instead of hardcoded like now
 	vec2 ij = floor(p/unit);
 	vec2 xy = fract(p / unit);  // avoids mod instability
 	//xy = 3.0f*xy*xy-2.0f*xy*xy*xy;
@@ -43,11 +43,11 @@ float pNoise(vec2 p){
 	float n = 0.0f;
 	float normK = 0.0f;
 	float f = frequency;
-	float amp = amplitude;
+	float amp = 1.0f;
 	for (int i = 0; i<octaves; i++){
 		n+=amp*noise(p, f);
 		f*=lacunarity;
-		normK+=amp;
+		normK+=amp/amplitude;
 		amp*=persistance;
 	}
 	float nf = n/normK;
@@ -66,7 +66,7 @@ void main(){
 
 	vec3 pos = getPos(vertexIndex);
 	vec2 vertexPlanePosition = pos.xz;
-
+	
 	float noiseValue = pNoise(vertexPlanePosition * scale);
 	
 	positions[vertexIndex * 3 + 1] = 20*noiseValue;

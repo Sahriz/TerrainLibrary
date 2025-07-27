@@ -15,7 +15,7 @@ namespace Core {
 	int getIndex(int x, int z, int width) {
 		return z * width + x;
 	}
-	PlaneMesh CreatePlaneMesh(int width, int height) {
+	PlaneMesh CreatePlaneMeshCPU(int width, int height) {
 
 		std::vector<glm::fvec3> vertices;
 		vertices.reserve(width*height); //coordinates (x, y, z)
@@ -116,7 +116,7 @@ namespace Core {
 		return program;
 	}
 
-	void ApplyHeightMapCPU(PlaneMesh& planeData, int height, int width) {
+	void CreateHeightMapPlaneMeshCPU(PlaneMesh& planeData, int height, int width) {
 
 		for(glm::fvec3& point : planeData.vertices) {
 			// Apply some height map logic here, for example, a simple sine wave
@@ -183,6 +183,8 @@ namespace Core {
 		else {
 			std::cout << "Something went wrong in CreateVertices";
 		}
+		glDeleteBuffers(1, &ssboVertices);
+		glDeleteProgram(computeShaderProgram);
 	}
 
 	void CreateIndices(PlaneMesh& planeData, int width, int height) {
@@ -217,6 +219,8 @@ namespace Core {
 		else {
 			std::cout << "Something went wrong in DisplaceVertices";
 		}
+		glDeleteBuffers(1, &ssboIndices);
+		glDeleteProgram(computeShaderProgram);
 	}
 	
 	void DisplaceVertices(PlaneMesh& planeData, int width, int height, float scale, float amplitude, float frequency, int octaves, float persistance, float lacunarity) {
@@ -266,6 +270,8 @@ namespace Core {
 		else {
 			std::cout << "Something went wrong in DisplaceVertices";
 		}
+		glDeleteBuffers(1, &ssboVertices);
+		glDeleteProgram(computeShaderProgram);
 		
 	}
 
@@ -307,9 +313,13 @@ namespace Core {
 		// Copy or use data
 		planeData.normals.assign(ptrNormals, ptrNormals + planeData.normals.size());
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		glDeleteBuffers(1, &ssboVertices);
+		glDeleteBuffers(1, &ssboNormals);
+		glDeleteProgram(computeShaderProgram);
+		
 	}
 	
-	PlaneMesh GetHeightMapPlane(int width, int height, float scale, float amplitude, float frequency, int octaves, float persistance, float lacunarity) {
+	PlaneMesh CreateHeightMapPlaneMeshGPU(int width, int height, float scale, float amplitude, float frequency, int octaves, float persistance, float lacunarity) {
 		PlaneMesh planeData;
 
 		std::vector<glm::fvec3> vertices;

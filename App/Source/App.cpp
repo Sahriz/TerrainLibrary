@@ -14,7 +14,7 @@ App::App() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 }
 
-std::string App::readFile(const std::string& filePath) {
+std::string App::ReadFile(const std::string& filePath) {
 	std::ifstream file(filePath);
 	std::stringstream buffer;
 	if (file) {
@@ -28,7 +28,7 @@ std::string App::readFile(const std::string& filePath) {
 
 
 // Shader loading helpers
-GLuint App::compileShader(GLenum type, const std::string& source) {
+GLuint App::CompileShader(GLenum type, const std::string& source) {
 	GLuint shader = glCreateShader(type);
 	const char* src = source.c_str();
 	glShaderSource(shader, 1, &src, nullptr);
@@ -49,14 +49,14 @@ GLuint App::compileShader(GLenum type, const std::string& source) {
 	return shader;
 }
 
-GLuint App::createShaderProgram(const std::string& vertexPath, const std::string& fragmentPath) {
-	std::string vertexSource = readFile(vertexPath);
-	std::string fragmentSource = readFile(fragmentPath);
+GLuint App::CreateShaderProgram(const std::string& vertexPath, const std::string& fragmentPath) {
+	std::string vertexSource = ReadFile(vertexPath);
+	std::string fragmentSource = ReadFile(fragmentPath);
 
-	GLuint vertShader = compileShader(GL_VERTEX_SHADER, vertexSource);
+	GLuint vertShader = CompileShader(GL_VERTEX_SHADER, vertexSource);
 	if (vertShader == 0) return 0;
 
-	GLuint fragShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
+	GLuint fragShader = CompileShader(GL_FRAGMENT_SHADER, fragmentSource);
 	if (fragShader == 0) {
 		glDeleteShader(vertShader);
 		return 0;
@@ -84,6 +84,17 @@ GLuint App::createShaderProgram(const std::string& vertexPath, const std::string
 	return program;
 }
 
+void App::ResetToStartValues() {
+	_scale = 0.1f;
+	_amplitude = 1.0f;
+	_frequency = 1.0f;
+	_octave = 5;
+	_lacunarity = 2.0f;
+	_persistance = 0.5f;
+	_width = 1000;
+	_height = 1000;
+}
+
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 	Camera* cam = static_cast<Camera*>(glfwGetWindowUserPointer(window));
 	if (cam) {
@@ -91,8 +102,87 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 	}
 }
 
-void App::updatePlaneMesh(Core::PlaneMesh& planeData) {
+void App::UpdatePlaneMesh(Core::PlaneMesh& planeData, GLuint& VAO, GLuint& VBOVertex, GLuint& VBONormals, GLuint& EBO) {
+	
+	planeData = std::move(Core::CreateHeightMapPlaneMeshGPU(_width,_height, _scale, _amplitude, _frequency, _octave, _persistance, _lacunarity));
+	std::cout << planeData.vertices.size() << " " << planeData.normals.size() << " " << planeData.indices.size() << std::endl;
+	ProgramSetup(planeData, VAO, VBOVertex, VBONormals, EBO);
+}
 
+void App::ProgramSetup(Core::PlaneMesh& planeData, GLuint& VAO, GLuint& VBOVertex, GLuint& VBONormals, GLuint& EBO) {
+	GLenum err;
+
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBOVertex);
+	glDeleteBuffers(1, &VBONormals);
+	glDeleteBuffers(1, &EBO);
+
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBOVertex);
+	glGenBuffers(1, &VBONormals);
+	glGenBuffers(1, &EBO);
+
+	glBindVertexArray(VAO);
+	
+	//Vertex buffer setup
+	glBindBuffer(GL_ARRAY_BUFFER, VBOVertex);
+	glBufferData(GL_ARRAY_BUFFER, planeData.vertices.size() * sizeof(glm::fvec3), planeData.vertices.data(), GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::fvec3), (void*)0);
+
+	//Normal buffer setup
+	glBindBuffer(GL_ARRAY_BUFFER, VBONormals);
+	glBufferData(GL_ARRAY_BUFFER, planeData.normals.size() * sizeof(glm::fvec3), planeData.normals.data(), GL_STATIC_DRAW);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::fvec3), (void*)0);
+
+	//Index buffer setup
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, planeData.indices.size() * sizeof(int), planeData.indices.data(), GL_STATIC_DRAW);
+
+	glBindVertexArray(0);
+	
+}
+
+void App::ProgramInit(Core::PlaneMesh& planeData, GLuint& VAO, GLuint& VBOVertex, GLuint& VBONormals, GLuint& EBO) {
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBOVertex);
+	glGenBuffers(1, &VBONormals);
+	glGenBuffers(1, &EBO);
+
+
+	glBindVertexArray(VAO);
+
+	//Vertex buffer setup
+	glBindBuffer(GL_ARRAY_BUFFER, VBOVertex);
+	glBufferData(GL_ARRAY_BUFFER, planeData.vertices.size() * sizeof(glm::fvec3), planeData.vertices.data(), GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::fvec3), (void*)0);
+	//Normal buffer setup
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBONormals);
+	glBufferData(GL_ARRAY_BUFFER, planeData.normals.size() * sizeof(glm::fvec3), planeData.normals.data(), GL_STATIC_DRAW);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::fvec3), (void*)0);
+	//Index buffer setup
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, planeData.indices.size() * sizeof(int), planeData.indices.data(), GL_STATIC_DRAW);
+
+
+	glBindVertexArray(0);
+}
+
+void App::Cleanup(GLuint& VAO, GLuint& VBOVertex, GLuint& VBONormals, GLuint& EBO, GLFWwindow* window, GLuint& shaderProgram) {
+	glDeleteProgram(shaderProgram);
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBOVertex);
+	glDeleteBuffers(1, &VBONormals);
+	glDeleteBuffers(1, &EBO);
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+	glfwDestroyWindow(window);
+	glfwTerminate();
 }
 
 void App::Run() {
@@ -119,37 +209,13 @@ void App::Run() {
 	const GLubyte* version = glGetString(GL_VERSION);
 	//std::cout << "OpenGL Version: " << version << std::endl;
 
-	Core::PlaneMesh planeMesh = Core::GetHeightMapPlane(1000, 1000);
+	Core::PlaneMesh planeData = Core::CreateHeightMapPlaneMeshGPU(_width, _height);
+	std::cout << planeData.vertices.size() << " " << planeData.normals.size() << " " << planeData.indices.size() << std::endl;
 
-	GLuint VAO, VBO, VBONormals, EBO;
+	GLuint VAO, VBOVertex, VBONormals, EBO;
+	ProgramInit(planeData, VAO, VBOVertex, VBONormals, EBO);
 
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &VBONormals);
-	glGenBuffers(1, &EBO);
-
-
-	glBindVertexArray(VAO);
-
-	//Vertex buffer setup
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, planeMesh.vertices.size() * sizeof(glm::fvec3), planeMesh.vertices.data(), GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::fvec3), (void*)0);
-	//Normal buffer setup
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBONormals);
-	glBufferData(GL_ARRAY_BUFFER, planeMesh.normals.size() * sizeof(glm::fvec3), planeMesh.normals.data(), GL_STATIC_DRAW);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(glm::fvec3), (void*)0);
-	//Index buffer setup
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, planeMesh.indices.size() * sizeof(int), planeMesh.indices.data(), GL_STATIC_DRAW);
-
-
-	glBindVertexArray(0);
-
-	GLuint shaderProgram = createShaderProgram("Shaders/shader.vert", "Shaders/shader.frag");
+	GLuint shaderProgram = CreateShaderProgram("Shaders/shader.vert", "Shaders/shader.frag");
 
 	// Load OpenGL with glad
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -197,8 +263,9 @@ void App::Run() {
 	
 	float prevTime = 0.0f;
 	glEnable(GL_CULL_FACE);
-	glEnable(GL_BACK);
+	glCullFace(GL_BACK);
 	glEnable(GL_DEPTH_TEST);
+	
 	while (!glfwWindowShouldClose(window)) {
 
 		glfwPollEvents();
@@ -211,26 +278,32 @@ void App::Run() {
 		camera.HandleKeyboardInput(deltaTime, window);
 		view = camera.GetViewMatrix();
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
+		//std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
 		//std::cout << "FPS: " << fps << std::endl << std::flush;
 		glUniform1f(timeLocation, timeValue);
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-
-		ImGui::Begin("Hello, ImGui!");
-		ImGui::Text("This is a text widget.");
-		ImGui::SliderFloat("NoiseScale", &scaleStartValue, 0.001f, 5.0f);
-		ImGui::SliderFloat("FrequencyScale", &frequencyStartValue, 0.001f, 5.0f);
-		ImGui::SliderInt("Octaves", &octaveStartValue, 0, 10);
-		ImGui::SliderFloat("Persistance", &persistanceStartValue, 0.1f, 4.0f);
-		ImGui::SliderFloat("Lacunarity", &lacunarityStartValue, 0.1f, 4.0f);
-		if (ImGui::Button("Click Me")) {
-			std::cout << "Button clicked!" << std::endl;
-			std::cout << scaleStartValue << std::endl;
-			UpdateStartValues(scaleStartValue, frequencyStartValue, octaveStartValue);
+		ImGui::SetNextWindowSize(ImVec2(380,300), 0);
+		ImGui::Begin("Settings Panel  |  Press E to access");
+		ImGui::Text("Mesh Settings");
+		ImGui::SliderInt("Width", &_width, 100, 2000);
+		ImGui::SliderInt("Height", &_height, 100, 2000);
+		ImGui::SliderFloat("NoiseScale", &_scale, 0.001f, 1.0f);
+		ImGui::SliderFloat("Amplitude", &_amplitude, 0.01f, 5.0f);
+		ImGui::SliderFloat("FrequencyScale", &_frequency, 0.01f, 5.0f);
+		ImGui::SliderInt("Octaves", &_octave, 0, 10);
+		ImGui::SliderFloat("Persistance", &_persistance, 0.1f, 4.0f);
+		ImGui::SliderFloat("Lacunarity", &_lacunarity, 0.1f, 4.0f);
+		
+		if (ImGui::Button("Regenerate Mesh")) {
+			UpdatePlaneMesh(planeData, VAO, VBOVertex, VBONormals, EBO);
 		}
+		if (ImGui::Button("Reset Settings")) {
+			ResetToStartValues();
+		}
+		ImGui::Text("WASD to move  |  Space to ascend and ctrl to descend");
 
 		ImGui::End();
 
@@ -241,29 +314,19 @@ void App::Run() {
 		glViewport(0, 0, display_w, display_h);
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		//glUseProgram(shaderProgram);
 
+		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
-
-		glDrawElements(GL_TRIANGLES, planeMesh.indices.size(), GL_UNSIGNED_INT, 0);
-
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); 
+		glDrawElements(GL_TRIANGLES, planeData.indices.size(), GL_UNSIGNED_INT, 0);
+		
 
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(window);
 	}
 
-	// Cleanup
-	glDeleteProgram(shaderProgram);
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &VBONormals);
-	glDeleteBuffers(1, &EBO);
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
-	glfwDestroyWindow(window);
-	glfwTerminate();
+	Cleanup(VAO, VBOVertex, VBONormals, EBO, window, shaderProgram);
 }
 
 

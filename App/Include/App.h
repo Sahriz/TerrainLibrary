@@ -29,24 +29,31 @@ public:
     ~App() {}
 
 private:
-    float _scaleStartValue =35.0f;
-	float _amplitudeStartValue = 0.5f;
-    float _frequencyStartValue = 4.0f;
-    int _octaveStartValue = 5;
-    float _lacunarityStartValue = 2.0f;
-    float _persistanceStartValue = 0.5f;
+    float _scale = 0.1f;
+	float _amplitude = 1.0f;
+    float _frequency = 1.0f;
+    int _octave = 5;
+    float _lacunarity = 2.0f;
+    float _persistance = 0.5f;
+    int _width = 1000;
+    int _height = 1000;
+    const glm::vec2 _imguiWindowSize = glm::vec2(10.0f,10.0f);
     glm::mat4 _perspectiveMat;
+    int _maxBufferSize = 2000;
 
-    std::string readFile(const std::string& filePath);
+    std::string ReadFile(const std::string& filePath);
 
-    GLuint compileShader(GLenum type, const std::string& source);
+    GLuint CompileShader(GLenum type, const std::string& source);
 
-    GLuint createShaderProgram(const std::string& vertexPath, const std::string& fragmentPath);
+    GLuint CreateShaderProgram(const std::string& vertexPath, const std::string& fragmentPath);
 
-    void updatePlaneMesh(Core::PlaneMesh& planeData);
-    void UpdateStartValues(float scale, float frequency, int octaves){
-        _scaleStartValue = scale;
-        _frequencyStartValue = frequency;
-        _octaveStartValue = octaves;
-    }
+    void UpdatePlaneMesh(Core::PlaneMesh& planeData, GLuint& VAO, GLuint& VBOVertex, GLuint& VBONormals, GLuint& EBO);
+
+    void ProgramSetup(Core::PlaneMesh& planeData, GLuint& VAO, GLuint& VBOVertex, GLuint& VBONormals, GLuint& EBO);
+
+    void ProgramInit(Core::PlaneMesh& planeData, GLuint& VAO, GLuint& VBOVertex, GLuint& VBONormals, GLuint& EBO);
+
+    void Cleanup(GLuint& VAO, GLuint& VBOVertex, GLuint& VBONormals, GLuint& EBO, GLFWwindow* window, GLuint& shaderProgram);
+
+    void ResetToStartValues();
 };
