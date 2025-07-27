@@ -296,7 +296,7 @@ namespace Core {
 		}
 	}
 
-	void CreateVertices(PlaneMesh& planeData, int width, int height) {
+	void CreateVertices(PlaneMesh& planeData, int width, int height, glm::ivec2 offset) {
 		GLuint ssboVertices;
 		glGenBuffers(1, &ssboVertices);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
@@ -307,13 +307,15 @@ namespace Core {
 
 		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
 		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
+		GLint offsetLoc = glGetUniformLocation(computeShaderProgram, "offset");
 
 		glUseProgram(computeShaderProgram);
 
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
+		glUniform2iv(offsetLoc, 1, &offset[0]);
 
-		GLuint numGroups = ((width * height) + 63) / 64;
+		GLuint numGroups = (((width+1) * (height+1)) + 63) / 64;
 		glDispatchCompute(numGroups, 1, 1);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -322,8 +324,6 @@ namespace Core {
 
 		// Copy or use data
 		if (ptr) {
-			
-			
 			planeData.vertices.assign(ptr, ptr + planeData.vertices.size());
 			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 		}
@@ -351,7 +351,7 @@ namespace Core {
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
 
-		GLuint numGroups = (((width-1) * (height-1)) + 63) / 64;
+		GLuint numGroups = (((width) * (height)) + 63) / 64;
 		glDispatchCompute(numGroups, 1, 1);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -372,7 +372,7 @@ namespace Core {
 	
 	void DisplaceVertices(PlaneMesh& planeData, int width, int height, float scale, float amplitude, float frequency, int octaves, float persistance, float lacunarity) {
 		GLuint ssboVertices;
-		if (width * height != planeData.vertices.size()) {
+		if ((width + 1) * (height + 1) != planeData.vertices.size()) {
 			std::cout << "wrong sizes!";
 		}
 		glGenBuffers(1, &ssboVertices);
@@ -402,7 +402,7 @@ namespace Core {
 		glUniform1f(persistanceLoc, persistance);
 		glUniform1f(lacunarityLoc, lacunarity);
 
-		GLuint numGroups = ((width * height) + 63) / 64;
+		GLuint numGroups = (((width + 1) * (height + 1)) + 63) / 64;
 		glDispatchCompute(numGroups, 1, 1);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -424,20 +424,20 @@ namespace Core {
 
 	void InterpolatedNormals(PlaneMesh& planeData, int width, int height){
 		GLuint ssboVertices, ssboNormals;
-		if (width * height != planeData.vertices.size()) {
+		if ((width + 1) * (height + 1) != planeData.vertices.size()) {
 			std::cout << "wrong sizes!";
 		}
-		if (width * height != planeData.normals.size()) {
+		if ((width + 1) * (height + 1) != planeData.normals.size()) {
 			std::cout << "wrong sizes!";
 		}
 		glGenBuffers(1, &ssboVertices);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, width * height * 3 * sizeof(float), planeData.vertices.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.vertices.size() * 3 * sizeof(float), planeData.vertices.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboVertices);
 
 		glGenBuffers(1, &ssboNormals);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormals);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, width*height * 3 * sizeof(float), planeData.normals.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.normals.size() * 3 * sizeof(float), planeData.normals.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboNormals);
 
 		GLuint computeShaderProgram = Core::CreateComputeShaderProgram("../Core/Source/Core/HeightMapNormal.comp");
@@ -450,7 +450,7 @@ namespace Core {
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
 
-		GLuint numGroups = ((width * height) + 63) / 64;
+		GLuint numGroups = (((width + 1) * (height + 1)) + 63) / 64;
 		glDispatchCompute(numGroups, 1, 1);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -466,21 +466,21 @@ namespace Core {
 		
 	}
 	
-	PlaneMesh CreateHeightMapPlaneMeshGPU(int width, int height, float scale, float amplitude, float frequency, int octaves, float persistance, float lacunarity) {
+	PlaneMesh CreateHeightMapPlaneMeshGPU(int width, int height, glm::ivec2 offset, float scale, float amplitude, float frequency, int octaves, float persistance, float lacunarity) {
 		PlaneMesh planeData;
 
 		std::vector<glm::fvec3> vertices;
-		vertices.resize(width * height);
+		vertices.resize((width+1) * (height+1));
 		std::vector<int> indices;
-		indices.resize((width - 1) * (width - 1) * 6);
+		indices.resize((width) * (height) * 6);
 		std::vector<glm::fvec3> normals;
-		normals.resize(width*height);
+		normals.resize((width+1)*(height+1));
 
 		planeData.vertices = vertices;
 		planeData.indices = indices;
 		planeData.normals = normals;
 
-		CreateVertices(planeData, width, height);
+		CreateVertices(planeData, width, height, offset);
 		CreateIndices(planeData, width, height);
 		DisplaceVertices(planeData, width, height, scale, amplitude, frequency, octaves, persistance, lacunarity);
 		InterpolatedNormals(planeData, width, height);

@@ -9,8 +9,9 @@ layout(std430, binding = 0) buffer indexBuffer{
 uniform int width;
 uniform int height;
 
+
 int getIndex(uint x, uint z){
-	return int(x + z * width);
+	return int(x + z * (width+1));
 }
 
 void main(){
@@ -19,7 +20,7 @@ void main(){
 
 	uint x = vertexIndex % uint(width);
 	uint z = vertexIndex / uint(width);
-	if(x >= width-1 || z >= height-1) return;
+	if(x >= width || z >= height) return;
 
 	int v0 = getIndex(x,z);
 	int v1 = getIndex(x+1,z);

@@ -9,21 +9,22 @@ layout(std430, binding = 0) buffer VertexBuffer{
 
 uniform int width;
 uniform int height;
+uniform ivec2 offset;
 
 void main(){
 
 	uint vertexIndex = gl_GlobalInvocationID.x;
-	if(vertexIndex >= uint(width*height)) return;
+	if(vertexIndex >= uint((width+1)*(height+1))) return;
 	
-	uint x = vertexIndex % uint(width);
-	uint z = vertexIndex / uint(width);
+	int x = int(vertexIndex % uint(width + 1));
+	int z = int(vertexIndex / uint(width + 1));
 	
-	float xScale = 100.0f/width;
-	float zScale = 100.0f/height;
+	float xScale = 500.0f/width;
+	float zScale = 500.0f/height;
 
-	float xPos = x*xScale;
+	float xPos = x * xScale + offset.x * (width) * xScale;
 	float yPos = 0;
-	float zPos = z*zScale;
+	float zPos = z * zScale + offset.y * (height) * zScale;
 
 	positions[vertexIndex*3] = xPos;
 	positions[vertexIndex*3 + 1] = yPos;

@@ -6,7 +6,9 @@
 class Camera
 {
 public:
+	Camera() {
 
+	}
 	Camera(GLFWwindow* window) {
 		_cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 		_cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -29,7 +31,7 @@ public:
 
 	glm::mat4 GetViewMatrix();
 
-	
+	glm::vec3 GetPosition();
 	private:
 	glm::vec3 _cameraPos;
 	glm::vec3 _cameraFront;

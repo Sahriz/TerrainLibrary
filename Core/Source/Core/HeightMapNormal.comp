@@ -28,16 +28,16 @@ void setNormal(uint index, vec3 n) {
 void main(){
 
 	uint vertexIndex = gl_GlobalInvocationID.x;
-	if(vertexIndex >= uint(width*height)) return;
+	if(vertexIndex >= uint((width+1) * (height+1))) return;
 
-	uint x = vertexIndex % uint(width);
-	uint z = vertexIndex / uint(width);
+	uint x = vertexIndex % uint(width+1);
+	uint z = vertexIndex / uint(width+1);
 
 	//Bottom Left corner
 	if(x== 0 && z == 0) {
 		vec3 v0 = getPos(vertexIndex);
 		vec3 v1 = getPos(vertexIndex+1);
-		vec3 v2 = getPos(vertexIndex+width);
+		vec3 v2 = getPos(vertexIndex+(width+1));
 
 		vec3 normal = normalize(cross(v2 - v1, v1 - v0));
 
@@ -45,11 +45,11 @@ void main(){
 		return;
 	}
 	//Bottom Right corner
-	if(x == uint(width) - 1 && z == 0) {
+	if(x == uint(width) && z == 0) {
 		vec3 v0 = getPos(vertexIndex);
-		vec3 v1 = getPos(vertexIndex + width);
+		vec3 v1 = getPos(vertexIndex + (width+1));
 		vec3 v2 = getPos(vertexIndex - 1);
-		vec3 v3 = getPos(vertexIndex - 1 + width);
+		vec3 v3 = getPos(vertexIndex - 1 + (width+1));
 
 		vec3 normal1 = normalize(cross(v3 - v1, v1 - v0));
 		vec3 normal2 = normalize(cross(v2 - v3, v3 - v0));
@@ -60,11 +60,11 @@ void main(){
 		return;
 	}
 	//Top Left corner
-	if(x == 0 && z == uint(height) - 1){
+	if(x == 0 && z == uint(height)){
 		vec3 v0 = getPos(vertexIndex);
-		vec3 v1 = getPos(vertexIndex - width);
+		vec3 v1 = getPos(vertexIndex - (width+1));
 		vec3 v2 = getPos(vertexIndex + 1);
-		vec3 v3 = getPos(vertexIndex + 1 - width);
+		vec3 v3 = getPos(vertexIndex + 1 - (width+1));
 
 		vec3 normal1 = normalize(cross(v3 - v1, v1 - v0));
 		vec3 normal2 = normalize(cross(v2 - v3, v3 - v0));
@@ -75,10 +75,10 @@ void main(){
 		return;
 	}
 	//Top Right corner
-	if(x == uint(width) - 1 && z == uint(height) - 1){
+	if(x == uint(width)  && z == uint(height) ){
 		vec3 v0 = getPos(vertexIndex);
 		vec3 v1 = getPos(vertexIndex - 1);
-		vec3 v2 = getPos(vertexIndex - width);
+		vec3 v2 = getPos(vertexIndex - (width+1));
 
 		vec3 normal = normalize(cross(v2 - v1, v1 - v0));
 
@@ -88,10 +88,10 @@ void main(){
 	//Left edge
 	if(x == 0){
 		vec3 v0 = getPos(vertexIndex);
-		vec3 v1 = getPos(vertexIndex - width);
-		vec3 v2 = getPos(vertexIndex + 1 - width);
+		vec3 v1 = getPos(vertexIndex - (width+1));
+		vec3 v2 = getPos(vertexIndex + 1 - (width+1));
 		vec3 v3 = getPos(vertexIndex + 1);
-		vec3 v4 = getPos(vertexIndex + width);
+		vec3 v4 = getPos(vertexIndex + (width+1));
 
 		vec3 normal1 = normalize(cross(v2 - v1, v1 - v0));
 		vec3 normal2 = normalize(cross(v3 - v2, v2 - v0));
@@ -103,12 +103,12 @@ void main(){
 		return;
 	}
 	//Right edge
-	if(x == uint(width) - 1){
+	if(x == uint(width) ){
 		vec3 v0 = getPos(vertexIndex);
 		vec3 v1 = getPos(vertexIndex + height);
 		vec3 v2 = getPos(vertexIndex - 1 + height);
 		vec3 v3 = getPos(vertexIndex - 1);
-		vec3 v4 = getPos(vertexIndex - width);
+		vec3 v4 = getPos(vertexIndex - (width+1));
 
 		vec3 normal1 = normalize(cross(v2 - v1, v1 - v0));
 		vec3 normal2 = normalize(cross(v3 - v2, v2 - v0));
@@ -123,8 +123,8 @@ void main(){
 	if(z == 0){
 		vec3 v0 = getPos(vertexIndex);
 		vec3 v1 = getPos(vertexIndex + 1);
-		vec3 v2 = getPos(vertexIndex + width);
-		vec3 v3 = getPos(vertexIndex - 1 + width);
+		vec3 v2 = getPos(vertexIndex + (width+1));
+		vec3 v3 = getPos(vertexIndex - 1 + (width+1));
 		vec3 v4 = getPos(vertexIndex - 1);
 
 		vec3 normal1 = normalize(cross(v2 - v1, v1 - v0));
@@ -137,11 +137,11 @@ void main(){
 		return;
 	}
 	//Top edge
-	if(z == uint(height) - 1){
+	if(z == uint(height)){
 		vec3 v0 = getPos(vertexIndex);
 		vec3 v1 = getPos(vertexIndex - 1);
-		vec3 v2 = getPos(vertexIndex - width);
-		vec3 v3 = getPos(vertexIndex + 1 - width);
+		vec3 v2 = getPos(vertexIndex - (width+1));
+		vec3 v3 = getPos(vertexIndex + 1 - (width+1));
 		vec3 v4 = getPos(vertexIndex + 1);
 
 		vec3 normal1 = normalize(cross(v2 - v1, v1 - v0));
@@ -156,12 +156,12 @@ void main(){
 	//All other vertices
 
 	vec3 v0 = getPos(vertexIndex);
-	vec3 v1 = getPos(vertexIndex + width);
+	vec3 v1 = getPos(vertexIndex + (width+1));
 	vec3 v2 = getPos(vertexIndex + 1);
-	vec3 v3 = getPos(vertexIndex + 1 - width);
-	vec3 v4 = getPos(vertexIndex - width);
+	vec3 v3 = getPos(vertexIndex + 1 - (width+1));
+	vec3 v4 = getPos(vertexIndex - (width+1));
 	vec3 v5 = getPos(vertexIndex - 1);
-	vec3 v6 = getPos(vertexIndex - 1 + width);
+	vec3 v6 = getPos(vertexIndex - 1 + (width+1));
 
 	vec3 normal1 = normalize(cross(v1 - v0, v2 - v0));
 	vec3 normal2 = normalize(cross(v2 - v3, v3 - v0));

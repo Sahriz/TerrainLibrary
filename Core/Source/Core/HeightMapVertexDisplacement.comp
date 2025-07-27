@@ -62,7 +62,7 @@ vec3 getPos(uint vertexIndex){
 void main(){
 
 	uint vertexIndex = gl_GlobalInvocationID.x;
-	if(vertexIndex >= uint(width*height)) return;
+	if(vertexIndex >= uint((width+1) * (height+1))) return;
 
 	vec3 pos = getPos(vertexIndex);
 	vec2 vertexPlanePosition = pos.xz;

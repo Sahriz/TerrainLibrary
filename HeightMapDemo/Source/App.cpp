@@ -104,7 +104,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 
 void App::UpdatePlaneMesh(Core::PlaneMesh& planeData, GLuint& VAO, GLuint& VBOVertex, GLuint& VBONormals, GLuint& EBO) {
 	
-	planeData = std::move(Core::CreateHeightMapPlaneMeshGPU(_width,_height, _scale, _amplitude, _frequency, _octave, _persistance, _lacunarity));
+	planeData = std::move(Core::CreateHeightMapPlaneMeshGPU(_width,_height, glm::ivec2(1,0), _scale, _amplitude, _frequency, _octave, _persistance, _lacunarity));
 	std::cout << planeData.vertices.size() << " " << planeData.normals.size() << " " << planeData.indices.size() << std::endl;
 	ProgramSetup(planeData, VAO, VBOVertex, VBONormals, EBO);
 }
