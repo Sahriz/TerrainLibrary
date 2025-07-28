@@ -3,9 +3,10 @@
 void App::Run() {
 	
 	while (!glfwWindowShouldClose(_renderer.GetWindow())) {
-		_renderer.Render();
+		_chunkManager.Update(_renderer.GetCameraPosition());
+		_renderer.Render(_chunkManager);
 	}
-	_renderer.Cleanup();
+	_renderer.Cleanup(_chunkManager);
 
 }
 

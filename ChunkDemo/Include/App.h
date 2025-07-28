@@ -12,5 +12,6 @@ public:
 
 private:
     Renderer _renderer;
+    ChunkManager _chunkManager;
 
 };

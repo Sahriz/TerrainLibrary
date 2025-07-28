@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+#include <unordered_set>
 #include <GLFW/glfw3.h>      // must come before glad
 #include <glad/glad.h>
 
@@ -20,6 +22,7 @@
 
 #include "ChunkManager.h"
 #include "Camera.h"
+#include "Core/Core.h"
 
 using ChunkCoord = glm::ivec2;
 
@@ -31,16 +34,19 @@ public:
         Init();
     }
     
-    void Render();
+    void Render(ChunkManager& chunkManager);
 
-    void Cleanup();
+    void Cleanup(ChunkManager& chunkManager);
+
     GLFWwindow* GetWindow() {
         return _window;
     }
+
+    glm::vec3& GetCameraPosition() {
+        return _camera.GetPosition();
+    }
     
 private:
-    ChunkManager _chunkManager;
-
     glm::mat4 _identity;
     glm::mat4 _view;
     glm::mat4 _model;
@@ -77,6 +83,7 @@ private:
     std::string ReadFile(const std::string& filePath);
     GLuint CompileShader(GLenum type, const std::string& source);
     GLuint CreateShaderProgram(const std::string& vertexPath, const std::string& fragmentPath);
+    void DrawChunks(ChunkManager& chunkManager);
     void ResetToStartValues();
     
 

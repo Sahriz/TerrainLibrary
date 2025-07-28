@@ -152,6 +152,17 @@ GLuint Renderer::CreateShaderProgram(const std::string& vertexPath, const std::s
 	return program;
 }
 
+void Renderer::DrawChunks(ChunkManager& chunkManager) {
+	std::unordered_map<ChunkCoord, Core::PlaneMesh>& chunkMap = chunkManager.GetChunkMap();
+	for (const glm::ivec2& coord : chunkManager.GetActiveChunkSet()) {
+		Core::PlaneMesh& planeData = chunkMap[coord];
+		glUseProgram(_shaderProgram);
+		glBindVertexArray(planeData.vao);
+		glDrawElements(GL_TRIANGLES, planeData.indices.size(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+	}
+}
+
 void Renderer::ResetToStartValues() {
 	_scale = 0.1f;
 	_amplitude = 1.0f;
@@ -163,7 +174,7 @@ void Renderer::ResetToStartValues() {
 	_height = 1000;
 }
 
-void Renderer::Render() {
+void Renderer::Render(ChunkManager& chunkManager) {
 	glfwPollEvents();
 
 	float timeValue = glfwGetTime();
@@ -193,7 +204,7 @@ void Renderer::Render() {
 	ImGui::SliderFloat("Lacunarity", &_lacunarity, 0.1f, 4.0f);
 
 	if (ImGui::Button("Regenerate Mesh")) {
-		_chunkManager.DestroyChunks();
+		chunkManager.DestroyChunks();
 	}
 	if (ImGui::Button("Reset Settings")) {
 		ResetToStartValues();
@@ -210,15 +221,15 @@ void Renderer::Render() {
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	_chunkManager.RenderChunks(_camera.GetPosition(), _shaderProgram);
+	DrawChunks(chunkManager);
 
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	glfwSwapBuffers(_window);
 }
 
-void Renderer::Cleanup() {
-	_chunkManager.DestroyChunks();
+void Renderer::Cleanup(ChunkManager& chunkManager) {
+	chunkManager.DestroyChunks();
 	glDeleteProgram(_shaderProgram);
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();

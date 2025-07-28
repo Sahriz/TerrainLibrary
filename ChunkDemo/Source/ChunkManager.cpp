@@ -1,20 +1,7 @@
 #include "ChunkManager.h"
 
-void ChunkManager::RenderChunks(glm::vec3 position, const GLuint& shaderProgram) {
-	
+void ChunkManager::Update(glm::vec3& position) {
 	UpdateActiveChunk(position);
-
-	for (const glm::ivec2& coord : _activeChunkSet) {
-		DrawChunk(_chunkMap[coord], shaderProgram);
-	}
-	_activeChunkSet.clear();
-}
-
-void ChunkManager::DrawChunk(const Core::PlaneMesh& planeData, const GLuint& shaderProgram) {
-	glUseProgram(shaderProgram);
-	glBindVertexArray(planeData.vao);
-	glDrawElements(GL_TRIANGLES, planeData.indices.size(), GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
 }
 
 void ChunkManager::SetupChunkRenderData(Core::PlaneMesh& mesh) {
@@ -40,10 +27,12 @@ void ChunkManager::SetupChunkRenderData(Core::PlaneMesh& mesh) {
 	glBindVertexArray(0);
 }
 
-void ChunkManager::UpdateActiveChunk(glm::vec3 position) {
+void ChunkManager::UpdateActiveChunk(const glm::vec3& position) {
 	float xScale = 500.0f / _width;
 	float zScale = 500.0f / _height;
 	glm::ivec2 playerChunk = glm::ivec2(std::floor(position.x / (_width * xScale)), std::floor(position.z / (_height * zScale)));  // based on player pos
+
+	_activeChunkSet.clear();
 
 	for (int x = -_viewDistance; x <= _viewDistance; x++) {
 		for (int z = -_viewDistance; z <= _viewDistance; z++) {

@@ -5,7 +5,7 @@ glm::mat4 Camera::GetViewMatrix()
 	return glm::lookAt(_cameraPos, _cameraPos + _cameraFront, _cameraUp);
 }
 
-glm::vec3 Camera::GetPosition() {
+glm::vec3& Camera::GetPosition() {
 	return _cameraPos;
 }
 

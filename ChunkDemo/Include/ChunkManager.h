@@ -22,12 +22,17 @@ public:
 
 	ChunkManager(){}
 
-	void RenderChunks(glm::vec3 postion, const GLuint& _shaderProgram);
-
 	void DestroyChunks();
 
-	
+	void Update(glm::vec3& position);
 
+	std::unordered_map<ChunkCoord, Core::PlaneMesh>& GetChunkMap() {
+		return _chunkMap;
+	}
+
+	std::unordered_set<glm::ivec2>& GetActiveChunkSet() {
+		return _activeChunkSet;
+	}
 
 private:
 	std::unordered_map<ChunkCoord, Core::PlaneMesh> _chunkMap;
@@ -45,9 +50,7 @@ private:
 
 	void SetupChunkRenderData(Core::PlaneMesh& mesh);
 
-	void DrawChunk(const Core::PlaneMesh& planeData, const GLuint& shaderProgram);
-
-	void UpdateActiveChunk(glm::vec3 position);
+	void UpdateActiveChunk(const glm::vec3& position);
 
 	void DeleteChunk(Core::PlaneMesh& mesh);
 
