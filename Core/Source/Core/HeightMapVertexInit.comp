@@ -19,8 +19,8 @@ void main(){
 	int x = int(vertexIndex % uint(width + 1));
 	int z = int(vertexIndex / uint(width + 1));
 	
-	float xScale = 500.0f/width;
-	float zScale = 500.0f/height;
+	float xScale = 100.0f/width;
+	float zScale = 100.0f/height;
 
 	float xPos = x * xScale + offset.x * (width) * xScale;
 	float yPos = 0;

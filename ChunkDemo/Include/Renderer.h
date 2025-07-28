@@ -59,9 +59,9 @@ private:
     int _octave = 5;
     float _lacunarity = 2.0f;
     float _persistance = 0.5f;
-    int _width = 1000;
-    int _height = 1000;
-    int _viewDistance = 1;
+    int _width = 250;
+    int _height = 250;
+    int _viewDistance = 4;
 
     int _screenWidth = 1280;
     int _screenHeight = 720;

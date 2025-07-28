@@ -202,9 +202,11 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	ImGui::SliderInt("Octaves", &_octave, 0, 10);
 	ImGui::SliderFloat("Persistance", &_persistance, 0.1f, 4.0f);
 	ImGui::SliderFloat("Lacunarity", &_lacunarity, 0.1f, 4.0f);
+	ImGui::SliderInt("ViewDistance", &_viewDistance, 0, 5);
 
 	if (ImGui::Button("Regenerate Mesh")) {
 		chunkManager.DestroyChunks();
+		chunkManager.UpdateSettings(_scale, _amplitude, _frequency, _octave, _lacunarity, _persistance, _width, _height, _viewDistance);
 	}
 	if (ImGui::Button("Reset Settings")) {
 		ResetToStartValues();

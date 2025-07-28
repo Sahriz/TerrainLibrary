@@ -24,6 +24,8 @@ namespace Core {
 		GLuint vboVertices = 0;
 		GLuint vboNormals = 0;
 		GLuint ebo = 0;
+
+		bool gpuLoaded = false;
 	};
 
 	

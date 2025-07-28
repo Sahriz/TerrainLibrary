@@ -26,6 +26,19 @@ public:
 
 	void Update(glm::vec3& position);
 
+	void UpdateSettings(float scale, float amplitude, float frequency, int octaves, float lacunarity, float persistance, int width, int height, int viewDistance) {
+		_scale = scale;
+		_amplitude = amplitude;
+		_frequency = frequency;
+		_octave = octaves;
+		_lacunarity = lacunarity;
+		_persistance = persistance;
+		_width = width;
+		_height = height;
+		_viewDistance = viewDistance;
+
+	}
+
 	std::unordered_map<ChunkCoord, Core::PlaneMesh>& GetChunkMap() {
 		return _chunkMap;
 	}
@@ -37,6 +50,7 @@ public:
 private:
 	std::unordered_map<ChunkCoord, Core::PlaneMesh> _chunkMap;
 	std::unordered_set<glm::ivec2> _activeChunkSet;
+	std::unordered_set<glm::ivec2> _previousFrameActiveChunkSet;
 
 	float _scale = 0.1f;
 	float _amplitude = 1.0f;
@@ -44,11 +58,13 @@ private:
 	int _octave = 5;
 	float _lacunarity = 2.0f;
 	float _persistance = 0.5f;
-	int _width = 1000;
-	int _height = 1000;
-	int _viewDistance = 1;
+	int _width = 250;
+	int _height = 250;
+	int _viewDistance = 4;
 
 	void SetupChunkRenderData(Core::PlaneMesh& mesh);
+
+	void CleanupChunkRenderData(Core::PlaneMesh& mesh);
 
 	void UpdateActiveChunk(const glm::vec3& position);
 

@@ -5,6 +5,7 @@ void ChunkManager::Update(glm::vec3& position) {
 }
 
 void ChunkManager::SetupChunkRenderData(Core::PlaneMesh& mesh) {
+
 	glGenVertexArrays(1, &mesh.vao);
 	glBindVertexArray(mesh.vao);
 
@@ -25,30 +26,58 @@ void ChunkManager::SetupChunkRenderData(Core::PlaneMesh& mesh) {
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(int), mesh.indices.data(), GL_STATIC_DRAW);
 
 	glBindVertexArray(0);
+
+	mesh.gpuLoaded = true;
 }
 
 void ChunkManager::UpdateActiveChunk(const glm::vec3& position) {
-	float xScale = 500.0f / _width;
-	float zScale = 500.0f / _height;
+	float xScale = 100.0f / _width;
+	float zScale = 100.0f / _height;
 	glm::ivec2 playerChunk = glm::ivec2(std::floor(position.x / (_width * xScale)), std::floor(position.z / (_height * zScale)));  // based on player pos
 
 	_activeChunkSet.clear();
 
 	for (int x = -_viewDistance; x <= _viewDistance; x++) {
 		for (int z = -_viewDistance; z <= _viewDistance; z++) {
+			if (glm::abs(x * z) > _viewDistance*_viewDistance/1.5f) continue;
 			glm::ivec2 coord = playerChunk + glm::ivec2(x, z);
-			glm::ivec2 offset = playerChunk + glm::ivec2(x * xScale, z * zScale);
 
 			// Generate if not yet stored
 			if (_chunkMap.find(coord) == _chunkMap.end()) {
 				_chunkMap[coord] = std::move(Core::CreateHeightMapPlaneMeshGPU(_width, _height, coord, _scale, _amplitude, _frequency, _octave, _persistance, _lacunarity));
 				SetupChunkRenderData(_chunkMap[coord]);
 			}
-
+			bool wasInactive = _previousFrameActiveChunkSet.find(coord) == _previousFrameActiveChunkSet.end();
+			bool needsReload = !_chunkMap[coord].gpuLoaded;
 			// Add an active chunk
 			_activeChunkSet.insert(coord);
+			if (wasInactive && needsReload) {
+				SetupChunkRenderData(_chunkMap[coord]);
+			}
 		}
 	}
+	for (const glm::ivec2& coord : _previousFrameActiveChunkSet) {
+		if (_activeChunkSet.find(coord) == _activeChunkSet.end()) {
+			CleanupChunkRenderData(_chunkMap[coord]);
+		}
+	}
+	_previousFrameActiveChunkSet = _activeChunkSet;
+}
+
+void ChunkManager::CleanupChunkRenderData(Core::PlaneMesh& mesh) {
+	// Delete the EBO, VBOs, and VAO
+	glDeleteBuffers(1, &mesh.ebo);
+	glDeleteBuffers(1, &mesh.vboNormals);
+	glDeleteBuffers(1, &mesh.vboVertices);
+	glDeleteVertexArrays(1, &mesh.vao);
+
+	// Optional: Reset IDs to 0 (OpenGL default for "none")
+	mesh.ebo = 0;
+	mesh.vboNormals = 0;
+	mesh.vboVertices = 0;
+	mesh.vao = 0;
+
+	mesh.gpuLoaded = false;
 }
 
 void ChunkManager::DestroyChunks() {
