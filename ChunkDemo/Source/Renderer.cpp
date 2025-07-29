@@ -7,7 +7,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 	}
 }
 
-void Renderer::Init() {
+Renderer::Renderer() {
+	_chunkRenderer = ChunkRenderer(_width, _height, _viewDistance);
+
 	if (!glfwInit()) {
 		// handle error
 	}
@@ -18,6 +20,7 @@ void Renderer::Init() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	_window = glfwCreateWindow(_screenWidth, _screenHeight, "ChunkDemo", nullptr, nullptr);
+	_camera = Camera(_window);
 	if (!_window) {
 		glfwTerminate();
 		return;
@@ -29,7 +32,7 @@ void Renderer::Init() {
 	_perspectiveMat = glm::perspective(glm::radians(80.0f), static_cast<float>(_screenWidth) / static_cast<float>(_screenHeight), 0.1f, 1000.0f);
 
 
-	_camera = Camera(_window);
+
 	glfwSetWindowUserPointer(_window, &_camera);
 	glfwSetCursorPosCallback(_window, mouse_callback);
 	glfwWindowHint(GLFW_DEPTH_BITS, 24);
@@ -80,6 +83,13 @@ void Renderer::Init() {
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glEnable(GL_DEPTH_TEST);
+	//Init();
+}
+
+
+
+void Renderer::Init() {
+	
 }
 
 std::string Renderer::ReadFile(const std::string& filePath) {
@@ -154,7 +164,8 @@ GLuint Renderer::CreateShaderProgram(const std::string& vertexPath, const std::s
 
 void Renderer::DrawChunks(ChunkManager& chunkManager) {
 	std::unordered_map<ChunkCoord, Core::PlaneMesh>& chunkMap = chunkManager.GetChunkMap();
-	for (const glm::ivec2& coord : chunkManager.GetActiveChunkSet()) {
+	_chunkRenderer.UpdateActiveChunk(GetCameraPosition(), chunkManager);
+	for (const glm::ivec2& coord : _chunkRenderer.GetActiveChunkSet()) {
 		Core::PlaneMesh& planeData = chunkMap[coord];
 		glUseProgram(_shaderProgram);
 		glBindVertexArray(planeData.vao);

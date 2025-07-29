@@ -294,8 +294,26 @@ namespace Core {
 
 
 		}
+
+		
+	}
+	GLuint _vertexInitComputeShaderProgram = 100;
+	GLuint _indexInitComputeShaderProgram = 100;
+	GLuint _vertexDisplacementComputeShaderProgram = 100;
+	GLuint _normalInterpelationComputeShaderProgram = 100;
+	void Init() {
+		_vertexInitComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexInit.comp");
+		_indexInitComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapIndexInit.comp");
+		_vertexDisplacementComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexDisplacement.comp");
+		_normalInterpelationComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapNormal.comp");
 	}
 
+	void Cleanup() {
+		glDeleteProgram(_vertexInitComputeShaderProgram);
+		glDeleteProgram(_indexInitComputeShaderProgram);
+		glDeleteProgram(_vertexDisplacementComputeShaderProgram);
+		glDeleteProgram(_normalInterpelationComputeShaderProgram);
+	}
 	void CreateVertices(PlaneMesh& planeData, int width, int height, glm::ivec2 offset) {
 		GLuint ssboVertices;
 		glGenBuffers(1, &ssboVertices);
@@ -303,13 +321,13 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.vertices.size() * 3 * sizeof(float), planeData.vertices.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboVertices);
 
-		GLuint computeShaderProgram = Core::CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexInit.comp");
 
-		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
-		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
-		GLint offsetLoc = glGetUniformLocation(computeShaderProgram, "offset");
 
-		glUseProgram(computeShaderProgram);
+		GLint widthLoc = glGetUniformLocation(_vertexInitComputeShaderProgram, "width");
+		GLint heightLoc = glGetUniformLocation(_vertexInitComputeShaderProgram, "height");
+		GLint offsetLoc = glGetUniformLocation(_vertexInitComputeShaderProgram, "offset");
+
+		glUseProgram(_vertexInitComputeShaderProgram);
 
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
@@ -331,7 +349,6 @@ namespace Core {
 			std::cout << "Something went wrong in CreateVertices";
 		}
 		glDeleteBuffers(1, &ssboVertices);
-		glDeleteProgram(computeShaderProgram);
 	}
 
 	void CreateIndices(PlaneMesh& planeData, int width, int height) {
@@ -341,12 +358,12 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.indices.size() * sizeof(int), planeData.indices.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboIndices);
 
-		GLuint computeShaderProgram = Core::CreateComputeShaderProgram("../Core/Source/Core/HeightMapIndexInit.comp");
+		
 
-		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
-		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
+		GLint widthLoc = glGetUniformLocation(_indexInitComputeShaderProgram, "width");
+		GLint heightLoc = glGetUniformLocation(_indexInitComputeShaderProgram, "height");
 
-		glUseProgram(computeShaderProgram);
+		glUseProgram(_indexInitComputeShaderProgram);
 
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
@@ -367,7 +384,6 @@ namespace Core {
 			std::cout << "Something went wrong in DisplaceVertices";
 		}
 		glDeleteBuffers(1, &ssboIndices);
-		glDeleteProgram(computeShaderProgram);
 	}
 	
 	void DisplaceVertices(PlaneMesh& planeData, int width, int height, float scale, float amplitude, float frequency, int octaves, float persistance, float lacunarity) {
@@ -380,18 +396,16 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.vertices.size() * 3 * sizeof(float), planeData.vertices.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboVertices);
 
-		GLuint computeShaderProgram = Core::CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexDisplacement.comp");
+		GLint widthLoc = glGetUniformLocation(_vertexDisplacementComputeShaderProgram, "width");
+		GLint heightLoc = glGetUniformLocation(_vertexDisplacementComputeShaderProgram, "height");
+		GLint scaleLoc = glGetUniformLocation(_vertexDisplacementComputeShaderProgram, "scale");
+		GLint amplitudeLoc = glGetUniformLocation(_vertexDisplacementComputeShaderProgram, "amplitude");
+		GLint frequencyLoc = glGetUniformLocation(_vertexDisplacementComputeShaderProgram, "frequency");
+		GLint octavesLoc = glGetUniformLocation(_vertexDisplacementComputeShaderProgram, "octaves");
+		GLint persistanceLoc = glGetUniformLocation(_vertexDisplacementComputeShaderProgram, "persistance");
+		GLint lacunarityLoc = glGetUniformLocation(_vertexDisplacementComputeShaderProgram, "lacunarity");
 
-		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
-		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
-		GLint scaleLoc = glGetUniformLocation(computeShaderProgram, "scale");
-		GLint amplitudeLoc = glGetUniformLocation(computeShaderProgram, "amplitude");
-		GLint frequencyLoc = glGetUniformLocation(computeShaderProgram, "frequency");
-		GLint octavesLoc = glGetUniformLocation(computeShaderProgram, "octaves");
-		GLint persistanceLoc = glGetUniformLocation(computeShaderProgram, "persistance");
-		GLint lacunarityLoc = glGetUniformLocation(computeShaderProgram, "lacunarity");
-
-		glUseProgram(computeShaderProgram);
+		glUseProgram(_vertexDisplacementComputeShaderProgram);
 
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
@@ -418,7 +432,6 @@ namespace Core {
 			std::cout << "Something went wrong in DisplaceVertices";
 		}
 		glDeleteBuffers(1, &ssboVertices);
-		glDeleteProgram(computeShaderProgram);
 		
 	}
 
@@ -440,12 +453,10 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, planeData.normals.size() * 3 * sizeof(float), planeData.normals.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboNormals);
 
-		GLuint computeShaderProgram = Core::CreateComputeShaderProgram("../Core/Source/Core/HeightMapNormal.comp");
+		GLint widthLoc = glGetUniformLocation(_normalInterpelationComputeShaderProgram, "width");
+		GLint heightLoc = glGetUniformLocation(_normalInterpelationComputeShaderProgram, "height");
 
-		GLint widthLoc = glGetUniformLocation(computeShaderProgram, "width");
-		GLint heightLoc = glGetUniformLocation(computeShaderProgram, "height");
-
-		glUseProgram(computeShaderProgram);
+		glUseProgram(_normalInterpelationComputeShaderProgram);
 
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
@@ -462,7 +473,7 @@ namespace Core {
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 		glDeleteBuffers(1, &ssboVertices);
 		glDeleteBuffers(1, &ssboNormals);
-		glDeleteProgram(computeShaderProgram);
+
 		
 	}
 	

@@ -27,8 +27,13 @@ namespace Core {
 
 		bool gpuLoaded = false;
 	};
+	extern GLuint _vertexInitComputeShaderProgram;
+	extern GLuint _indexInitComputeShaderProgram;
+	extern GLuint _vertexDisplacementComputeShaderProgram;
+	extern GLuint _normalInterpelationComputeShaderProgram;
 
-	
+	void Init();
+	void Cleanup();
 	void CreateVertices(PlaneMesh& planeData, int width, int height, glm::ivec2 offset = glm::ivec2(0,0));
 	void CreateIndices(PlaneMesh& planeData, int width, int height);
 	void DisplaceVertices(PlaneMesh& planeData, int width, int height, float scale = 1.0f, float amplitude = 1.0f, float frequency = 1.0f, int octaves = 5, float persistance = 0.5f, float lacunarity = 2.0f);

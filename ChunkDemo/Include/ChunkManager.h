@@ -20,11 +20,13 @@ namespace std {
 class ChunkManager {
 public:
 
-	ChunkManager(){}
+	ChunkManager() {}
 
 	void DestroyChunks();
 
-	void Update(glm::vec3& position);
+	void Update(const glm::vec3& position);
+
+	void GenerateChunk(const glm::vec3& position);
 
 	void UpdateSettings(float scale, float amplitude, float frequency, int octaves, float lacunarity, float persistance, int width, int height, int viewDistance) {
 		_scale = scale;
@@ -43,14 +45,8 @@ public:
 		return _chunkMap;
 	}
 
-	std::unordered_set<glm::ivec2>& GetActiveChunkSet() {
-		return _activeChunkSet;
-	}
-
 private:
 	std::unordered_map<ChunkCoord, Core::PlaneMesh> _chunkMap;
-	std::unordered_set<glm::ivec2> _activeChunkSet;
-	std::unordered_set<glm::ivec2> _previousFrameActiveChunkSet;
 
 	float _scale = 0.1f;
 	float _amplitude = 1.0f;
@@ -61,12 +57,6 @@ private:
 	int _width = 250;
 	int _height = 250;
 	int _viewDistance = 4;
-
-	void SetupChunkRenderData(Core::PlaneMesh& mesh);
-
-	void CleanupChunkRenderData(Core::PlaneMesh& mesh);
-
-	void UpdateActiveChunk(const glm::vec3& position);
 
 	void DeleteChunk(Core::PlaneMesh& mesh);
 

@@ -31,7 +31,7 @@ public:
 
 	glm::mat4 GetViewMatrix();
 
-	glm::vec3& GetPosition();
+	const glm::vec3& GetPosition();
 	private:
 	glm::vec3 _cameraPos;
 	glm::vec3 _cameraFront;

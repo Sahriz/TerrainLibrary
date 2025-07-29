@@ -22,6 +22,7 @@
 
 #include "ChunkManager.h"
 #include "Camera.h"
+#include "ChunkRenderer.h"
 #include "Core/Core.h"
 
 using ChunkCoord = glm::ivec2;
@@ -30,9 +31,7 @@ using ChunkCoord = glm::ivec2;
 
 class Renderer {
 public:
-    Renderer() {
-        Init();
-    }
+    Renderer();
     
     void Render(ChunkManager& chunkManager);
 
@@ -42,11 +41,13 @@ public:
         return _window;
     }
 
-    glm::vec3& GetCameraPosition() {
+    const glm::vec3& GetCameraPosition() {
         return _camera.GetPosition();
     }
     
 private:
+    ChunkRenderer _chunkRenderer = ChunkRenderer(_width, _height, _viewDistance);
+
     glm::mat4 _identity;
     glm::mat4 _view;
     glm::mat4 _model;
