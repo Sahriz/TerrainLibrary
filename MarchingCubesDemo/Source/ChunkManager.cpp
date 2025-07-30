@@ -16,7 +16,8 @@ void ChunkManager::GenerateChunk(const glm::vec3& position) {
 				//std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";
 				// Generate if not yet stored
 				if (_chunkMap.find(coord) == _chunkMap.end()) {
-					_chunkMap[coord] = std::move(Core::CreateVoxel3DMesh(_width, _height, _depth, coord, false));
+					glm::vec3 offset = glm::vec3(_width, _height, _depth);
+					_chunkMap[coord] = std::move(Core::CreateVoxel3DMesh(_width, _height, _depth, offset, false));
 					
 				}
 			}

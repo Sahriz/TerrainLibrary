@@ -608,7 +608,7 @@ namespace Core {
 		glDeleteProgram(_3dNoiseMapComputeShader);
 	}
 
-	std::vector<float> CreateFlat2DNoiseMap(const int width, const int height, const int depth, const glm::ivec2 offset, bool CleanUp) {
+	std::vector<float> CreateFlat2DNoiseMap(const int width, const int height, const int depth, const glm::vec2 offset, bool CleanUp) {
 		std::vector<float> noiseMap;
 		int paddedWidth = width + 1;
 		int paddedHeight = height + 1;
@@ -629,16 +629,13 @@ namespace Core {
 
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
-		glUniform2iv(offsetLoc, 1, &offset[0]);
+		glUniform2fv(offsetLoc, 1, &offset[0]);
 
 		return noiseMap;
 	}
-	std::vector<float> CreateFlat3DNoiseMap(const int width,const int height,const int depth,const glm::ivec3 offset, bool CleanUp) {
+	std::vector<float> CreateFlat3DNoiseMap(const int width,const int height,const int depth,const glm::vec3 offset, bool CleanUp) {
 		std::vector<float> noiseMap;
-		int paddedWidth = width + 1;
-		int paddedHeight = height + 1;
-		int paddedDepth = depth + 1;
-		int sizeOfNoiseMap = paddedWidth * paddedHeight * paddedDepth;
+		int sizeOfNoiseMap = width * height * depth;
 		noiseMap.resize(sizeOfNoiseMap);
 
 		GLuint ssboNoise;
@@ -654,15 +651,15 @@ namespace Core {
 
 		glUseProgram(_3dNoiseMapComputeShader);
 
-		glUniform1i(widthLoc, paddedWidth);
-		glUniform1i(heightLoc, paddedHeight);
-		glUniform1i(depthLoc, paddedDepth);
-		glUniform2iv(offsetLoc, 1, &offset[0]);
+		glUniform1i(widthLoc, width);
+		glUniform1i(heightLoc, height);
+		glUniform1i(depthLoc, depth);
+		glUniform2fv(offsetLoc, 1, &offset[0]);
 
 		glDispatchCompute(
-			(GLuint)ceil(paddedWidth / 8.0f),
-			(GLuint)ceil(paddedHeight / 8.0f),
-			(GLuint)ceil(paddedDepth / 8.0f)
+			(GLuint)ceil(width / 8.0f),
+			(GLuint)ceil(height / 8.0f),
+			(GLuint)ceil(depth / 8.0f)
 		);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -851,7 +848,7 @@ namespace Core {
 
 	}
 	
-	PlaneMesh CreateHeightMapPlaneMeshGPU(int width, int height, glm::ivec2 offset, float scale, float amplitude, float frequency, int octaves, float persistance, float lacunarity, bool CleanUp) {
+	PlaneMesh CreateHeightMapPlaneMeshGPU(int width, int height, glm::vec2 offset, float scale, float amplitude, float frequency, int octaves, float persistance, float lacunarity, bool CleanUp) {
 		PlaneMesh planeData;
 		if(CleanUp)
 			Init();
@@ -876,11 +873,12 @@ namespace Core {
 		return planeData;
 	}	
 
-	PlaneMesh CreateVoxel3DMesh(int width, int height, int depth, glm::ivec3 offset, bool CleanUp) {
+	PlaneMesh CreateVoxel3DMesh(int width, int height, int depth, glm::vec3 offset, bool CleanUp) {
 		PlaneMesh planeData;
 		int paddedHeight = height + 1;
 		int paddedWidth = width + 1;
 		int paddedDepth = depth + 1;
+		
 		std::vector<float> noiseMap = CreateFlat3DNoiseMap(paddedHeight, paddedWidth, paddedDepth, offset, true);
 
 		/*for (const auto& temp : noiseMap) {
@@ -904,7 +902,7 @@ namespace Core {
 			glm::ivec3(1, 1, 1),
 			glm::ivec3(0, 1, 1),
 		};
-		float isoLevel = 0.0f; // threshold
+		float isoLevel = 0.1f; // threshold
 
 		
 		for (int i = 0; i < 256; i++) {
@@ -913,11 +911,11 @@ namespace Core {
 			}
 		}
 		float scale = 5.0f;
-		for (int x = 0; x < paddedWidth; x++)
+		for (int x = 0; x < width; x++)
 		{
-			for (int y = 0; y < paddedHeight; y++)
+			for (int y = 0; y < height; y++)
 			{
-				for (int z = 0; z < paddedDepth; z++)
+				for (int z = 0; z < depth; z++)
 				{
 					// 1. Get cube corners
 					glm::vec3 cubeCorners[8];
@@ -931,7 +929,7 @@ namespace Core {
 						int iz = (int)corner.z;
 
 						int idx = ix + iy * paddedWidth + iz * paddedWidth * paddedHeight;
-						cubeCorners[i] = (corner + glm::vec3(offset)) * scale; // optionally scale it
+						cubeCorners[i] = (corner + offset) ; // optionally scale it
 
 						cubeValues[i] = noiseMap[idx];
 
@@ -1007,8 +1005,7 @@ namespace Core {
 		planeData.vertices = vertices;
 		planeData.indices = indices;
 		planeData.normals = normals;
-		//for(int i = 0; i < vertices.size())
-		std::cout << vertices.size() << "    " << normals.size() << "     " << indices.size();
+		
 		return planeData;
 	}
 	glm::vec3 VertInterp(float iso, glm::vec3 p1, glm::vec3 p2, float v1, float v2)

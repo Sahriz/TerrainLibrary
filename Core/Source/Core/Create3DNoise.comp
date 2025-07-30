@@ -88,25 +88,25 @@ void main(){
 	uint yPos = gl_GlobalInvocationID.y;
 	uint zPos = gl_GlobalInvocationID.z;
 	
-	if(xPos >= uint(width+1) || yPos >= uint(height+1) || zPos >= uint(depth+1)) return;
+	if(xPos >= uint(width) || yPos >= uint(height) || zPos >= uint(depth)) return;
 
 
 	//vec3 position = vec3(float(xPos), float(yPos), float(zPos));
-	vec3 position = (vec3(xPos, yPos, zPos) + offset) * 0.01;
+	vec3 position = vec3((xPos + offset.x)/width, (yPos + offset.y)/height,(zPos + offset.z)/depth);
 	
-	float noiseValue = 1;
+	float noiseValue = 0;
 	float amplitude = 1.0f;
 	float frequency = 1.0f;
 	float maxAmp = 0.0f;
+	float scale = 1.0f / 0.5f; // Adjust scale as needed
 	for (int i = 0; i < 5; i++){
-		float noise = amplitude * cnoise(frequency*position);
+		float noise = amplitude * cnoise(frequency*position * scale);
 		maxAmp += amplitude;
 		amplitude *= 0.5f;
 		frequency *= 2.0f;
 		noiseValue += noise;
-		
 	}
 	noiseValue /= maxAmp;
-	uint index = xPos + yPos * uint(width+1) + zPos * uint(width+1) * uint(height+1);
+	int index = int(xPos) + int(yPos) * width + int(zPos) * width * height;
 	noiseMap[index] = noiseValue;
 }

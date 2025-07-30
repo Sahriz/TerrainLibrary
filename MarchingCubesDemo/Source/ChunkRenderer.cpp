@@ -3,18 +3,14 @@
 
 
 void ChunkRenderer::UpdateActiveChunk(const glm::vec3& position, ChunkManager& chunkManager) {
-	float xScale = 100.0f / _width;
-	float yScale = 100.0f / _height;
-	float zScale = 100.0f / _depth;
 	
 	glm::ivec3 playerChunk = chunkManager.GetChunkCoordFromPosition(position);
 	_previousFrameActiveChunkSet = _activeChunkSet;
 	_activeChunkSet.clear();
 	auto& chunkMap = chunkManager.GetChunkMap();
-	
-	for (int x = 0; x <= 0; x++) {
-		for (int y = 0; y <= 0; y++) {
-			for (int z = 0; z <= 0; z++) {
+	for (int x = -_viewDistance; x <= _viewDistance; x++) {
+		for (int y = -_viewDistance; y <= _viewDistance; y++) {
+			for (int z = -_viewDistance; z <= _viewDistance; z++) {
 				if (glm::abs(x * y * z) > _viewDistance * _viewDistance / 1.5f) continue;
 				glm::ivec3 coord = playerChunk + glm::ivec3(x, y, z);
 				//std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";

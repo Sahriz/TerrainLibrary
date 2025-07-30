@@ -8,7 +8,12 @@
 class ChunkRenderer {
 public:
 
-	ChunkRenderer(int width, int height, int depth, int viewDistance) : _width(width), _height(height), _depth(depth), _viewDistance(viewDistance) {}
+	ChunkRenderer(int width, int height, int depth, int viewDistance)  {
+		_width = width;
+		_height = height;
+		_depth = depth; 
+		_viewDistance = viewDistance;
+	}
 
 	void UpdateActiveChunk(const glm::vec3& position, ChunkManager& chunkManager);
 
