@@ -6,17 +6,17 @@ void ChunkManager::Update(const glm::vec3& position) {
 
 void ChunkManager::GenerateChunk(const glm::vec3& position) {
 	
-	glm::ivec3 playerChunk = GetChunkCoordFromPosition(position);
+	glm::vec3 playerChunk = GetChunkCoordFromPosition(position);
 	
 	for (int x = -_viewDistance; x <= _viewDistance; x++) {
 		for (int y = -_viewDistance; y <= _viewDistance; y++) {
 			for (int z = -_viewDistance; z <= _viewDistance; z++) {
 				if (glm::abs(x * y * z) > _viewDistance * _viewDistance / 1.5f) continue;
-				glm::ivec3 coord = playerChunk + glm::ivec3(x, y, z);
+				glm::vec3 coord = playerChunk + glm::vec3(x, y, z);
 				//std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";
 				// Generate if not yet stored
 				if (_chunkMap.find(coord) == _chunkMap.end()) {
-					glm::vec3 offset = glm::vec3(_width, _height, _depth);
+					glm::vec3 offset = coord * glm::vec3(_width, _height, _depth);
 					_chunkMap[coord] = std::move(Core::CreateVoxel3DMesh(_width, _height, _depth, offset, false));
 					
 				}

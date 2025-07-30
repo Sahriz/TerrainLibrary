@@ -654,7 +654,7 @@ namespace Core {
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
 		glUniform1i(depthLoc, depth);
-		glUniform2fv(offsetLoc, 1, &offset[0]);
+		glUniform3fv(offsetLoc, 1, &offset[0]);
 
 		glDispatchCompute(
 			(GLuint)ceil(width / 8.0f),

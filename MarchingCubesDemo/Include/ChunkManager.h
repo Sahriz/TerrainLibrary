@@ -32,7 +32,7 @@ public:
 
 	void GenerateChunk(const glm::vec3& position);
 
-	glm::ivec3 GetChunkCoordFromPosition(const glm::vec3& position) const {
+	glm::vec3 GetChunkCoordFromPosition(const glm::vec3& position) const {
 		float xScale = 1.0f / _width;
 		float yScale = 1.0f / _height;
 		float zScale = 1.0f / _depth;
@@ -73,7 +73,7 @@ private:
 	int _width = 32;
 	int _height = 32;
 	int _depth = 32;
-	int _viewDistance = 1;
+	int _viewDistance = 2;
 
 	void DeleteChunk(Core::PlaneMesh& mesh);
 

@@ -96,11 +96,11 @@ void main(){
 	
 	float noiseValue = 0;
 	float amplitude = 1.0f;
-	float frequency = 1.0f;
+	float frequency = 2.0f;
 	float maxAmp = 0.0f;
-	float scale = 1.0f / 0.5f; // Adjust scale as needed
+	//float scale = 1.0f / 0.5f; // Adjust scale as needed
 	for (int i = 0; i < 5; i++){
-		float noise = amplitude * cnoise(frequency*position * scale);
+		float noise = amplitude * cnoise(frequency*position);
 		maxAmp += amplitude;
 		amplitude *= 0.5f;
 		frequency *= 2.0f;
