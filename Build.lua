@@ -23,3 +23,5 @@ include "Vendor/glfw/Build-glfw.lua"
 include "Vendor/Glad/Build-Glad.lua"
 
 include "Vendor/imgui/Build-imgui.lua"
+
+include "MarchingCubesDemo/Build-MarchingCubesDemo.lua"

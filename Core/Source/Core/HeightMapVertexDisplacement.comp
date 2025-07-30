@@ -5,7 +5,7 @@
 
 
 
-layout(local_size_x = 64) in;
+layout(local_size_x = 16, local_size_y = 16) in;
 
 layout(std430, binding = 0) buffer VertexBuffer {
     float positions[];
@@ -61,9 +61,14 @@ vec3 getPos(uint vertexIndex){
 
 void main(){
 
-	uint vertexIndex = gl_GlobalInvocationID.x;
-	if(vertexIndex >= uint((width+1) * (height+1))) return;
+	uint x = gl_GlobalInvocationID.x;
+    uint z = gl_GlobalInvocationID.y;
 
+	 // Guard against overflow
+    if (x >= uint(width+1) || z >= uint(height+1)) return;
+
+
+	int vertexIndex = int(z * (width+1) + x); // new flat index
 	vec3 pos = getPos(vertexIndex);
 	vec2 vertexPlanePosition = pos.xz;
 	

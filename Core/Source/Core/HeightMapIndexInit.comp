@@ -1,6 +1,6 @@
 #version 430 core
 
-layout(local_size_x = 64) in;
+layout(local_size_x = 16, local_size_y = 16) in;
 
 layout(std430, binding = 0) buffer indexBuffer{
 	int indices[];
@@ -15,19 +15,20 @@ int getIndex(uint x, uint z){
 }
 
 void main(){
+	uint x = gl_GlobalInvocationID.x;
+    uint z = gl_GlobalInvocationID.y;
 
-	uint vertexIndex = gl_GlobalInvocationID.x;
-
-	uint x = vertexIndex % uint(width);
-	uint z = vertexIndex / uint(width);
-	if(x >= width || z >= height) return;
+    // Guard against overflow
+    if (x >= uint(width) || z >= uint(height)) return;
 
 	int v0 = getIndex(x,z);
 	int v1 = getIndex(x+1,z);
 	int v2 = getIndex(x,z+1);
 	int v3 = getIndex(x+1,z+1);
 
-	int base = int(vertexIndex * 6);
+	// One quad (two triangles) per invocation
+    int vertexIndex = int(z * width + x); // new flat index
+    int base = vertexIndex * 6;
 	
 	//Triangle 1
 	indices[base + 0] = v0;

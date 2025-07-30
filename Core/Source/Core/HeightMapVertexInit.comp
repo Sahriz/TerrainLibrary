@@ -1,6 +1,6 @@
 #version 430 core
 
-layout(local_size_x = 64) in;
+layout(local_size_x = 16, local_size_y = 16) in;
 
 layout(std430, binding = 0) buffer VertexBuffer{
 	float positions[];
@@ -12,12 +12,11 @@ uniform int height;
 uniform ivec2 offset;
 
 void main(){
+	uint x = gl_GlobalInvocationID.x;
+    uint z = gl_GlobalInvocationID.y;
 
-	uint vertexIndex = gl_GlobalInvocationID.x;
-	if(vertexIndex >= uint((width+1)*(height+1))) return;
-	
-	int x = int(vertexIndex % uint(width + 1));
-	int z = int(vertexIndex / uint(width + 1));
+	 // Guard against overflow
+    if (x >= uint(width+1) || z >= uint(height+1)) return;
 	
 	float xScale = 100.0f/width;
 	float zScale = 100.0f/height;
@@ -25,6 +24,9 @@ void main(){
 	float xPos = x * xScale + offset.x * (width) * xScale;
 	float yPos = 0;
 	float zPos = z * zScale + offset.y * (height) * zScale;
+	
+	// One quad (two triangles) per invocation
+    int vertexIndex = int(z * (width+1) + x); // new flat index
 
 	positions[vertexIndex*3] = xPos;
 	positions[vertexIndex*3 + 1] = yPos;

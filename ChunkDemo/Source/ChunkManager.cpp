@@ -16,7 +16,7 @@ void ChunkManager::GenerateChunk(const glm::vec3& position) {
 
 			// Generate if not yet stored
 			if (_chunkMap.find(coord) == _chunkMap.end()) {
-				_chunkMap[coord] = std::move(Core::CreateHeightMapPlaneMeshGPU(_width, _height, coord, _scale, _amplitude, _frequency, _octave, _persistance, _lacunarity));
+				_chunkMap[coord] = std::move(Core::CreateHeightMapPlaneMeshGPU(_width, _height, coord, _scale, _amplitude, _frequency, _octave, _persistance, _lacunarity, false));
 				//return;
 				//counter++;
 				if (counter > 2) {

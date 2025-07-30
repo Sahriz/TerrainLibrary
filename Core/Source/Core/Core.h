@@ -31,14 +31,21 @@ namespace Core {
 	extern GLuint _indexInitComputeShaderProgram;
 	extern GLuint _vertexDisplacementComputeShaderProgram;
 	extern GLuint _normalInterpelationComputeShaderProgram;
+	extern GLuint _3dNoiseMapComputeShader;
 
 	void Init();
 	void Cleanup();
-	void CreateVertices(PlaneMesh& planeData, int width, int height, glm::ivec2 offset = glm::ivec2(0,0));
-	void CreateIndices(PlaneMesh& planeData, int width, int height);
-	void DisplaceVertices(PlaneMesh& planeData, int width, int height, float scale = 1.0f, float amplitude = 1.0f, float frequency = 1.0f, int octaves = 5, float persistance = 0.5f, float lacunarity = 2.0f);
-	void InterpolatedNormals(PlaneMesh& planeData, int width, int height);
-	PlaneMesh CreateHeightMapPlaneMeshGPU(int width, int height, glm::ivec2 offset = glm::ivec2(0,0), float scale = 0.1f, float amplitude = 1.0f, float frequency = 1.0f, int octaves = 5, float persistance = 0.5f, float lacunarity = 2.0f);
+
+	std::vector<float> CreateFlat2DNoiseMap(const int width, const int height, const int depth, const glm::ivec2 offset, bool CleanUp);
+	std::vector<float> CreateFlat3DNoiseMap(const int width, const int height, const int depth, const glm::ivec3 offset, bool CleanUp);
+
+	void CreateVertices(PlaneMesh& planeData, int width, int height, glm::ivec2 offset = glm::ivec2(0,0), bool CleanUp = true);
+	void CreateIndices(PlaneMesh& planeData, int width, int height, bool CleanUp);
+	void DisplaceVertices(PlaneMesh& planeData, int width, int height, float scale = 1.0f, float amplitude = 1.0f, float frequency = 1.0f, int octaves = 5, float persistance = 0.5f, float lacunarity = 2.0f, bool CleanUp = true);
+	void InterpolatedNormals(PlaneMesh& planeData, int width, int height, bool CleanUp);
+	PlaneMesh CreateHeightMapPlaneMeshGPU(int width, int height, glm::ivec2 offset = glm::ivec2(0,0), float scale = 0.1f, float amplitude = 1.0f, float frequency = 1.0f, int octaves = 5, float persistance = 0.5f, float lacunarity = 2.0f, bool CleanUp = true);
 	
-	
+	glm::vec3 VertInterp(float iso, glm::vec3 p1, glm::vec3 p2, float v1, float v2);
+	PlaneMesh CreateVoxel2DMesh(int width, int height, int depth, glm::ivec2 offset, bool CleanUp);
+	PlaneMesh CreateVoxel3DMesh(int width, int height, int depth, glm::ivec3 offset, bool CleanUp);
 }
