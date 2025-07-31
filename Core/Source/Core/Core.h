@@ -32,6 +32,8 @@ namespace Core {
 	extern GLuint _vertexDisplacementComputeShaderProgram;
 	extern GLuint _normalInterpelationComputeShaderProgram;
 	extern GLuint _3dNoiseMapComputeShader;
+	extern GLuint _marchingCubesTriCounterComputeShader;
+	extern GLuint _marchingCubesTriCreatorComputeShader;
 
 	void Init();
 	void Cleanup();
@@ -46,6 +48,9 @@ namespace Core {
 	PlaneMesh CreateHeightMapPlaneMeshGPU(int width, int height, glm::vec2 offset = glm::vec2(0,0), float scale = 0.1f, float amplitude = 1.0f, float frequency = 1.0f, int octaves = 5, float persistance = 0.5f, float lacunarity = 2.0f, bool CleanUp = true);
 	
 	glm::vec3 VertInterp(float iso, glm::vec3 p1, glm::vec3 p2, float v1, float v2);
+	int CountMarchingCubesTriangleCount(int width, int height, int depth, glm::vec3 offset, bool CleanUp, std::vector<float>& noiseMap, float iso);
+	PlaneMesh CreateMarchingCubesTriangles(int width, int height, int depth, int offset, bool CleanUp, std::vector<float>& noiseMap, float iso, int triangleCount);
 	PlaneMesh CreateVoxel2DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp);
-	PlaneMesh CreateVoxel3DMesh(int width, int height, int depth, glm::vec3 offset, bool CleanUp);
+	PlaneMesh CreateMarchingCubes3DMesh(int width, int height, int depth, glm::vec3 offset, bool CleanUp);
+	PlaneMesh CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp);
 }

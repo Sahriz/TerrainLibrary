@@ -11,7 +11,7 @@ void ChunkRenderer::UpdateActiveChunk(const glm::vec3& position, ChunkManager& c
 	for (int x = -_viewDistance; x <= _viewDistance; x++) {
 		for (int y = -_viewDistance; y <= _viewDistance; y++) {
 			for (int z = -_viewDistance; z <= _viewDistance; z++) {
-				if (glm::abs(x * y * z) > _viewDistance * _viewDistance / 1.5f) continue;
+				if (glm::abs(x * y * z) > _viewDistance * _viewDistance * _viewDistance / 1.5f) continue;
 				glm::vec3 coord = playerChunk + glm::vec3(x, y, z);
 				//std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";
 				

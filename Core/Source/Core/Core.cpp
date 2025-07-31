@@ -593,12 +593,16 @@ namespace Core {
 	GLuint _vertexDisplacementComputeShaderProgram = 0;
 	GLuint _normalInterpelationComputeShaderProgram = 0;
 	GLuint _3dNoiseMapComputeShader = 0;
+	GLuint _marchingCubesTriCounterComputeShader = 0;
+	GLuint _marchingCubesTriCreatorComputeShader = 0;
 	void Init() {
 		_vertexInitComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexInit.comp");
 		_indexInitComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapIndexInit.comp");
 		_vertexDisplacementComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexDisplacement.comp");
 		_normalInterpelationComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapNormal.comp");
 		_3dNoiseMapComputeShader = CreateComputeShaderProgram("../Core/Source/Core/Create3DNoise.comp");
+		_marchingCubesTriCounterComputeShader = CreateComputeShaderProgram("../Core/Source/Core/MarchingCubesCountTris.comp");
+		_marchingCubesTriCreatorComputeShader = CreateComputeShaderProgram("../Core/Source/Core/MarchingCubesCreateTris.comp");
 	}
 	void Cleanup() {
 		glDeleteProgram(_vertexInitComputeShaderProgram);
@@ -606,6 +610,8 @@ namespace Core {
 		glDeleteProgram(_vertexDisplacementComputeShaderProgram);
 		glDeleteProgram(_normalInterpelationComputeShaderProgram);
 		glDeleteProgram(_3dNoiseMapComputeShader);
+		glDeleteProgram(_marchingCubesTriCounterComputeShader);
+		glDeleteProgram(_marchingCubesTriCreatorComputeShader);
 	}
 
 	std::vector<float> CreateFlat2DNoiseMap(const int width, const int height, const int depth, const glm::vec2 offset, bool CleanUp) {
@@ -873,12 +879,155 @@ namespace Core {
 		return planeData;
 	}	
 
-	PlaneMesh CreateVoxel3DMesh(int width, int height, int depth, glm::vec3 offset, bool CleanUp) {
+
+
+	
+
+	int CountMarchingCubesTriangleCount(int width, int height, int depth, glm::vec3 offset, bool CleanUp,std::vector<float>& noiseMap, float iso) {
+		GLuint ssboCounter;
+		int initial = 0;
+		glGenBuffers(1, &ssboCounter);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, 1 * sizeof(int), &initial, GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboCounter);
+
+		GLuint ssboNoise;
+		glGenBuffers(1, &ssboNoise);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMap.size() * sizeof(float), noiseMap.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboNoise);
+
+		GLint widthLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "width");
+		GLint heightLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "height");
+		GLint depthLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "depth");
+		GLint offsetLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "offset");
+		GLint isoLevelLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "isoLevel");
+
+		glUseProgram(_marchingCubesTriCounterComputeShader);
+
+		glUniform1i(widthLoc, width);
+		glUniform1i(heightLoc, height);
+		glUniform1i(depthLoc, depth);
+		glUniform3fv(offsetLoc, 1, &offset[0]);
+		glUniform1f(isoLevelLoc, iso);
+
+		glDispatchCompute((GLuint)ceil(width / 8.0f),
+			(GLuint)ceil(height / 8.0f), (GLuint)ceil(depth / 8.0f));
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
+		int* ptr = (int*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+
+		// Copy or use data
+		int vertexCount = 0;
+		if (ptr) {
+			vertexCount = *ptr;
+			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		}
+		else {
+			std::cout << "Something went wrong in CreateVertices";
+		}
+		glDeleteBuffers(1, &ssboCounter);
+		glDeleteBuffers(1, &ssboNoise);
+		return vertexCount;
+	}
+	PlaneMesh CreateMarchingCubesTriangles(int width, int height, int depth, glm::vec3 offset, bool CleanUp, std::vector<float>& noiseMap, float iso, int triangleCount) {
+		PlaneMesh planeData;
+		int vectorSize = triangleCount;
+		std::vector<glm::fvec3> vertices;
+		vertices.resize(vectorSize);
+		std::vector<int> indices;
+		indices.resize(vectorSize);
+		std::vector<glm::fvec3> normals;
+		normals.resize(vectorSize);
+
+		GLuint ssboNoise;
+		GLuint ssboVertices;
+		GLuint ssboNormals;
+		GLuint ssboIndices;
+		GLuint ssboCounter;
+
+		glGenBuffers(1, &ssboNoise);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMap.size() * sizeof(float), noiseMap.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
+
+		glGenBuffers(1, &ssboVertices);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, vertices.size() * 3 * sizeof(float), vertices.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboVertices);
+
+		glGenBuffers(1, &ssboNormals);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormals);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, normals.size() * 3 * sizeof(float),normals.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboNormals);
+
+		glGenBuffers(1, &ssboIndices);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndices);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, indices.size() * sizeof(int), indices.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboIndices);
+
+		int initial = 0;
+		glGenBuffers(1, &ssboCounter);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, 1 * sizeof(int), &initial, GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssboCounter);
+
+		GLint widthLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "width");
+		GLint heightLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "height");
+		GLint depthLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "depth");
+		GLint offsetLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "offset");
+		GLint isoLevelLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "isoLevel");
+
+		glUseProgram(_marchingCubesTriCreatorComputeShader);
+
+		glUniform1i(widthLoc, width);
+		glUniform1i(heightLoc, height);
+		glUniform1i(depthLoc, depth);
+		glUniform3fv(offsetLoc, 1, &offset[0]);
+		glUniform1f(isoLevelLoc, iso);
+
+		glDispatchCompute((GLuint)ceil(width / 8.0f),
+			(GLuint)ceil(height / 8.0f), (GLuint)ceil(depth / 8.0f));
+
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
+		glm::fvec3* ptrVerts = (glm::fvec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+
+		if(ptrVerts) {
+			planeData.vertices.assign(ptrVerts, ptrVerts + vertices.size());
+		}
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormals);
+		glm::fvec3* ptrNormals = (glm::fvec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+
+		if(ptrNormals) {
+			planeData.normals.assign(ptrNormals, ptrNormals + normals.size());
+		}
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndices);
+		int* ptrIndices = (int*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+
+		if (ptrIndices) {
+			planeData.indices.assign(ptrIndices, ptrIndices + indices.size());
+		}
+
+		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		glDeleteBuffers(1, &ssboNoise);
+		glDeleteBuffers(1, &ssboVertices);
+		glDeleteBuffers(1, &ssboNormals);
+		glDeleteBuffers(1, &ssboIndices);
+		glDeleteBuffers(1, &ssboCounter);
+
+		return planeData;
+	}
+	PlaneMesh CreateMarchingCubes3DMesh(int width, int height, int depth, glm::vec3 offset, bool CleanUp) {
 		PlaneMesh planeData;
 		int paddedHeight = height + 1;
 		int paddedWidth = width + 1;
 		int paddedDepth = depth + 1;
-		
+
 		std::vector<float> noiseMap = CreateFlat3DNoiseMap(paddedHeight, paddedWidth, paddedDepth, offset, true);
 
 		/*for (const auto& temp : noiseMap) {
@@ -890,8 +1039,8 @@ namespace Core {
 		std::vector<int> indices;
 		std::vector<glm::fvec3> normals;
 
-		
-		glm::ivec3 cornerOffsets[] = 
+
+		glm::ivec3 cornerOffsets[] =
 		{
 			glm::ivec3(0, 0, 0),
 			glm::ivec3(1, 0, 0),
@@ -904,7 +1053,7 @@ namespace Core {
 		};
 		float isoLevel = 0.1f; // threshold
 
-		
+
 		for (int i = 0; i < 256; i++) {
 			for (int j = 0; j < 16; j++) {
 				FlatTriTable[i * 16 + j] = triTable[i][j];
@@ -929,7 +1078,7 @@ namespace Core {
 						int iz = (int)corner.z;
 
 						int idx = ix + iy * paddedWidth + iz * paddedWidth * paddedHeight;
-						cubeCorners[i] = (corner + offset) ; // optionally scale it
+						cubeCorners[i] = (corner + offset); // optionally scale it
 
 						cubeValues[i] = noiseMap[idx];
 
@@ -1005,7 +1154,22 @@ namespace Core {
 		planeData.vertices = vertices;
 		planeData.indices = indices;
 		planeData.normals = normals;
+
+		//std::cout << vertices.size() << "\n";
+
+		return planeData;
+	}
+
+	PlaneMesh CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp) {
 		
+		int paddedHeight = height + 1;
+		int paddedWidth = width + 1;
+		int paddedDepth = depth + 1;
+
+		std::vector<float> noiseMap = CreateFlat3DNoiseMap(paddedHeight, paddedWidth, paddedDepth, offset, true);
+		int triCount = CountMarchingCubesTriangleCount(paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, noiseMap, 0.1f);
+		PlaneMesh planeData = CreateMarchingCubesTriangles(paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, noiseMap, 0.1f, triCount);
+
 		return planeData;
 	}
 	glm::vec3 VertInterp(float iso, glm::vec3 p1, glm::vec3 p2, float v1, float v2)
