@@ -74,7 +74,7 @@ void Camera::ProcessMouseMovement(GLFWwindow* window, double xpos, double ypos)
 	// recalculate _cameraFront
 	glm::vec3 direction;
 	direction.x = cos(glm::radians(_yaw)) * cos(glm::radians(_pitch));
-	direction.y = 0;
+	direction.y = sin(glm::radians(_pitch));
 	direction.z = sin(glm::radians(_yaw)) * cos(glm::radians(_pitch));
 	_cameraFront = glm::normalize(direction);
 }

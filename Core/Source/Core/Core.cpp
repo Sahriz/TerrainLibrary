@@ -592,6 +592,7 @@ namespace Core {
 	GLuint _3dNoiseMapComputeShader = 0;
 	GLuint _marchingCubesTriCounterComputeShader = 0;
 	GLuint _marchingCubesTriCreatorComputeShader = 0;
+	GLuint _smoothMarchingCubesVertCreatorComputeShader = 0;
 	void Init() {
 		_vertexInitComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexInit.comp");
 		_indexInitComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapIndexInit.comp");
@@ -600,6 +601,7 @@ namespace Core {
 		_3dNoiseMapComputeShader = CreateComputeShaderProgram("../Core/Source/Core/Create3DNoise.comp");
 		_marchingCubesTriCounterComputeShader = CreateComputeShaderProgram("../Core/Source/Core/MarchingCubesCountTris.comp");
 		_marchingCubesTriCreatorComputeShader = CreateComputeShaderProgram("../Core/Source/Core/MarchingCubesCreateTris.comp");
+		_smoothMarchingCubesVertCreatorComputeShader = CreateComputeShaderProgram("../Core/Source/Core/SmoothMarchingCubesVertexGen.comp");
 	}
 	void Cleanup() {
 		glDeleteProgram(_vertexInitComputeShaderProgram);
@@ -609,6 +611,7 @@ namespace Core {
 		glDeleteProgram(_3dNoiseMapComputeShader);
 		glDeleteProgram(_marchingCubesTriCounterComputeShader);
 		glDeleteProgram(_marchingCubesTriCreatorComputeShader);
+		glDeleteProgram(_smoothMarchingCubesVertCreatorComputeShader);
 	}
 
 	std::vector<float> CreateFlat2DNoiseMap(const int width, const int height, const int depth, const glm::vec2 offset, bool CleanUp) {
@@ -1172,8 +1175,8 @@ namespace Core {
 		int paddedDepth = depth + 1;
 
 		std::vector<float> noiseMap = CreateFlat3DNoiseMap(paddedHeight, paddedWidth, paddedDepth, offset, true);
-		int triCount = CountMarchingCubesTriangleCount(paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, noiseMap, 0.1f);
-		PlaneMesh planeData = CreateMarchingCubesTriangles(paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, noiseMap, 0.1f, triCount);
+		int triCount = CountMarchingCubesTriangleCount(paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, noiseMap, 0.0f);
+		PlaneMesh planeData = CreateMarchingCubesTriangles(paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, noiseMap, 0.0f, triCount);
 
 		return planeData;
 	}
@@ -1189,5 +1192,12 @@ namespace Core {
 
 		float mu = (iso - v1) / (v2 - v1);
 		return p1 + mu * (p2 - p1);
+	}
+
+	PlaneMesh CreateMarchingCubes3DMeshSmoothGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp) {
+		PlaneMesh planeData;
+
+
+		return planeData;
 	}
 }
