@@ -1,7 +1,7 @@
 #include "ChunkRenderer.h"
 
 void ChunkRenderer::UpdateActiveChunk(const glm::vec3& position, ChunkManager& chunkManager) {
-	glm::vec2 playerChunk = chunkManager.GetChunkCoordFromPosition(position);
+	glm::vec2 playerChunk = chunkManager.GetChunkCoordFromPosition(position);	
 	_previousFrameActiveChunkSet = _activeChunkSet;
 	_activeChunkSet.clear();
 	auto& chunkMap = chunkManager.GetChunkMap();
@@ -20,13 +20,11 @@ void ChunkRenderer::UpdateActiveChunk(const glm::vec3& position, ChunkManager& c
 				}
 			}
 		}	
-	
 	for (const glm::vec2& coord : _previousFrameActiveChunkSet) {
 		if (_activeChunkSet.find(coord) == _activeChunkSet.end() && chunkMap[coord].gpuLoaded) {
 			CleanupChunkRenderData(chunkMap[coord]);
 		}
 	}
-	
 }
 
 void ChunkRenderer::SetupChunkRenderData(Core::PlaneMesh& mesh) {

@@ -100,13 +100,12 @@ void main(){
 
 
 	//vec3 position = vec3(float(xPos), float(yPos), float(zPos));
-	vec3 position = vec3((xPos + offset.x)/width, (yPos + offset.y)/width,(zPos + offset.z)/depth);
+	vec3 position = vec3((int(xPos) + offset.x)/float(width), (int(yPos) + offset.y)/float(height),(int(zPos) + offset.z)/float(depth));
 	
 	float noiseValue = 0;
 	float amp = amplitude;
 	float freq = frequency;
 	float maxAmp = 0.0f;
-	//float scale = 1.0f / 0.5f; // Adjust scale as needed
 	for (int i = 0; i < octaves; i++){
 		float noise = amp * cnoise(freq*position);
 		maxAmp += amp;
@@ -118,8 +117,7 @@ void main(){
 	int index = int(xPos) + int(yPos) * width + int(zPos) * width * height;
 	if(useHeightDropoff){
 		float t = float(yPos) / float(height);
-		float q = 1.0f - t;
-		float falloffBase = pow(t, 2.0f) * 2.0f - 0.5f;
+		float falloffBase = pow(t, 3.5f) * 2.0f - 0.7f;
 		noiseValue -= falloffBase;
 	}
 	

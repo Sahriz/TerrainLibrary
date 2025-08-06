@@ -1237,8 +1237,8 @@ namespace Core {
 		glUniform1i(heightLoc, heigth);
 		glUniform1i(depthLoc, depth);
 
-		glDispatchCompute((GLuint)ceil(width / 8.0f),
-			(GLuint)ceil(heigth / 8.0f), (GLuint)ceil(depth / 8.0f));
+		glDispatchCompute((GLuint)ceil((width - 2) / 8.0f),
+			(GLuint)ceil((heigth - 2) / 8.0f), (GLuint)ceil((depth - 2) / 8.0f));
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
@@ -1280,7 +1280,7 @@ namespace Core {
 
 		glGenBuffers(1, &ssboVertex);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertex);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, 3*vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, 3 * vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboVertex);
 
 		glGenBuffers(1, &ssboNormal);
@@ -1317,8 +1317,8 @@ namespace Core {
 		glUniform1i(depthLoc, depth);
 		glUniform3fv(offsetLoc, 1, &offset[0]);
 
-		glDispatchCompute((GLuint)ceil(width / 8.0f),
-			(GLuint)ceil(heigth / 8.0f), (GLuint)ceil(depth / 8.0f));
+		glDispatchCompute((GLuint)ceil((width-2) / 8.0f),
+			(GLuint)ceil((heigth-2) / 8.0f), (GLuint)ceil((depth-2) / 8.0f));
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertex);

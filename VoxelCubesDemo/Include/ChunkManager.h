@@ -67,7 +67,7 @@ private:
 	int _width = 16;
 	int _height = 256;
 	int _depth = 16;
-	int _viewDistance = 12;
+	int _viewDistance = 16;
 
 	void DeleteChunk(Core::PlaneMesh& mesh);
 

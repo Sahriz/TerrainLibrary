@@ -34,20 +34,19 @@ uniform vec3 offset;
 
 bool IsSolid(int x, int y, int z)
 {
-    if(x >= gridWidth-1 || y >= gridHeight-1 || z >= gridDepth-1) return false;
-
-    return noiseMap[x + y * (gridWidth) + z * (gridWidth) * (gridHeight)] > 0;
+    int index = x + y * (gridWidth) + z * (gridWidth) * (gridHeight);
+    return noiseMap[index] > 0;
 }
 
 void main(){
 
 	vec3 position = gl_GlobalInvocationID.xyz;
 
-    vec3 paddedNoisePosition = position + vec3(1,1,1);
+    vec3 paddedNoisePosition = vec3(int(position.x),int(position.y),int(position.z)) + vec3(1,1,1);
 
-    if(paddedNoisePosition.x >= gridWidth-1 || paddedNoisePosition.y >= gridHeight-1, paddedNoisePosition.z >= gridDepth-1) return;
+    if(paddedNoisePosition.x >= gridWidth-2 || paddedNoisePosition.y >= gridHeight-2 || paddedNoisePosition.z >= gridDepth-2) return;
     
-    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z))) return;
+    if(!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z))) return;
     
     vec3 base = vec3(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z)) + vec3(offset.x, offset.y, offset.z);
 
@@ -59,8 +58,6 @@ void main(){
         vec3 v3 = base + cornerOffset[2];
 
         vec3 normal = vec3(1.f, 0.f, 0.f);
-        
-        
         
         uint baseVertIndex = atomicAdd(vertexCounter, 4*3);
         uint baseIndex = atomicAdd(indexCounter, 6);
