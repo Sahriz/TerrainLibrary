@@ -1,0 +1,64 @@
+#version 430 core
+
+// Compute shader - one thread per cube
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+layout(std430, binding = 0) buffer noiseBuffer {
+    float noiseMap[];
+};
+
+// Edge array: stores vertex index for each potential edge
+layout(std430, binding = 1) buffer CounterBuffer {
+    int counter;  
+};
+
+uniform int gridWidth; 
+uniform int gridHeight;
+uniform int gridDepth;
+uniform vec3 offset;
+
+bool IsSolid(int x, int y, int z)
+{
+    return noiseMap[x + z * (gridWidth ) + y * (gridWidth ) * (gridHeight )] > 0;
+}
+
+void main() {
+    
+    vec3 position = gl_GlobalInvocationID.xyz;
+
+    
+    
+    if(position.x >= gridWidth || position.y >= gridHeight, position.z >= gridDepth) return;
+    
+    if (!IsSolid(int(position.x), int(position.y), int(position.z)))
+        return;
+    
+    vec3 base = vec3(int(position.x),int(position.y),int(position.z)) + vec3(offset.x, offset.x, offset.x);
+    
+    if (!IsSolid(int(position.x) + 1, int(position.y), int(position.z)))
+    {
+        atomicAdd(counter, 1);
+    }
+    if (!IsSolid(int(position.x) - 1, int(position.y), int(position.z)))
+    {
+        atomicAdd(counter, 1);
+    }
+
+    if (!IsSolid(int(position.x), int(position.y) + 1, int(position.z)))
+    {
+        atomicAdd(counter, 1);
+    }
+    if (!IsSolid(int(position.x), int(position.y) - 1, int(position.z)))
+    {
+        atomicAdd(counter, 1);
+    }
+
+    if (!IsSolid(int(position.x), int(position.y), int(position.z) + 1))
+    {
+        atomicAdd(counter, 1);
+    }
+    if (!IsSolid(int(position.x), int(position.y), int(position.z) - 1))
+    {
+        atomicAdd(counter, 1);
+    }
+}
