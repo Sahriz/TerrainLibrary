@@ -1179,13 +1179,13 @@ namespace Core {
 		return planeData;
 	}
 
-	PlaneMesh CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp) {
+	PlaneMesh CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves) {
 		
 		int paddedHeight = height + 1;
 		int paddedWidth = width + 1;
 		int paddedDepth = depth + 1;
 
-		std::vector<float> noiseMap = CreateFlat3DNoiseMap(paddedHeight, paddedWidth, paddedDepth, offset, true);
+		std::vector<float> noiseMap = CreateFlat3DNoiseMap(paddedHeight, paddedWidth, paddedDepth, offset, true, amplitude, frequency, persistance, lacunarity, octaves);
 		int triCount = CountMarchingCubesTriangleCount(paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, noiseMap, 0.0f);
 		PlaneMesh planeData = CreateMarchingCubesTriangles(paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, noiseMap, 0.0f, triCount);
 

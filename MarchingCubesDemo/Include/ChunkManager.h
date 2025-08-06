@@ -44,7 +44,7 @@ public:
 		);
 	}
 
-	void UpdateSettings(float scale, float amplitude, float frequency, int octaves, float lacunarity, float persistance, int width, int height, int viewDistance) {
+	void UpdateSettings(float scale, float amplitude, float frequency, int octaves, float lacunarity, float persistance, int width, int height, int depth, int viewDistance) {
 		_scale = scale;
 		_amplitude = amplitude;
 		_frequency = frequency;
@@ -53,6 +53,7 @@ public:
 		_persistance = persistance;
 		_width = width;
 		_height = height;
+		_depth = depth;
 		_viewDistance = viewDistance;
 
 	}

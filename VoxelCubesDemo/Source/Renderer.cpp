@@ -176,13 +176,15 @@ void Renderer::DrawChunks(ChunkManager& chunkManager) {
 void Renderer::ResetToStartValues() {
 	_scale = 0.1f;
 	_amplitude = 1.0f;
-	_frequency = 1.0f;
+	_frequency = 0.1f;
 	_octave = 5;
 	_lacunarity = 2.0f;
 	_persistance = 0.5f;
-	_width = 32;
-	_height = 32;
-	_depth = 32;
+	_width = 16;
+	_height = 256;
+	_depth = 16;
+	_viewDistance = 16;
+	
 }
 
 void Renderer::Render(ChunkManager& chunkManager) {
@@ -202,22 +204,24 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
-	ImGui::SetNextWindowSize(ImVec2(380, 300), 0);
+	ImGui::SetNextWindowSize(ImVec2(380, 350), 0);
 	ImGui::Begin("Settings Panel  |  Press E to access");
 	ImGui::Text("Mesh Settings");
-	ImGui::SliderInt("Width", &_width, 100, 2000);
-	ImGui::SliderInt("Height", &_height, 100, 2000);
+	ImGui::SliderInt("Width", &_width, 8, 32);
+	ImGui::SliderInt("Height", &_height, 8, 256);
+	ImGui::SliderInt("Depth", &_depth, 8, 32);
 	ImGui::SliderFloat("NoiseScale", &_scale, 0.001f, 1.0f);
 	ImGui::SliderFloat("Amplitude", &_amplitude, 0.01f, 5.0f);
 	ImGui::SliderFloat("FrequencyScale", &_frequency, 0.01f, 5.0f);
-	ImGui::SliderInt("Octaves", &_octave, 0, 10);
-	ImGui::SliderFloat("Persistance", &_persistance, 0.1f, 4.0f);
-	ImGui::SliderFloat("Lacunarity", &_lacunarity, 0.1f, 4.0f);
-	ImGui::SliderInt("ViewDistance", &_viewDistance, 0, 5);
+	ImGui::SliderInt("Octaves", &_octave, 0, 6);
+	ImGui::SliderFloat("Persistance", &_persistance, 0.1f, 2.0f);
+	ImGui::SliderFloat("Lacunarity", &_lacunarity, 0.5f, 4.0f);
+	ImGui::SliderInt("ViewDistance", &_viewDistance, 8, 32);
 
 	if (ImGui::Button("Regenerate Mesh")) {
 		chunkManager.DestroyChunks();
-		chunkManager.UpdateSettings(_scale, _amplitude, _frequency, _octave, _lacunarity, _persistance, _width, _height, _viewDistance);
+		chunkManager.UpdateSettings(_scale, _amplitude, _frequency, _octave, _lacunarity, _persistance, _width, _height,_depth, _viewDistance);
+		_chunkRenderer.UpdateVariables(_width, _height, _depth, _viewDistance);
 	}
 	if (ImGui::Button("Reset Settings")) {
 		ResetToStartValues();

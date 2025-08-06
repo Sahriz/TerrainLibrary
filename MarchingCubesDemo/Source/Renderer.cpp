@@ -205,19 +205,20 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	ImGui::SetNextWindowSize(ImVec2(380, 300), 0);
 	ImGui::Begin("Settings Panel  |  Press E to access");
 	ImGui::Text("Mesh Settings");
-	ImGui::SliderInt("Width", &_width, 100, 2000);
-	ImGui::SliderInt("Height", &_height, 100, 2000);
+	ImGui::SliderInt("Width", &_width, 32,128);
+	ImGui::SliderInt("Height", &_height, 32, 128);
+	ImGui::SliderInt("Depth", &_depth, 32, 128);
 	ImGui::SliderFloat("NoiseScale", &_scale, 0.001f, 1.0f);
-	ImGui::SliderFloat("Amplitude", &_amplitude, 0.01f, 5.0f);
-	ImGui::SliderFloat("FrequencyScale", &_frequency, 0.01f, 5.0f);
-	ImGui::SliderInt("Octaves", &_octave, 0, 10);
+	ImGui::SliderFloat("Amplitude", &_amplitude, 0.01f, 3.0f);
+	ImGui::SliderFloat("FrequencyScale", &_frequency, 0.01f, 3.0f);
+	ImGui::SliderInt("Octaves", &_octave, 0, 6);
 	ImGui::SliderFloat("Persistance", &_persistance, 0.1f, 4.0f);
 	ImGui::SliderFloat("Lacunarity", &_lacunarity, 0.1f, 4.0f);
 	ImGui::SliderInt("ViewDistance", &_viewDistance, 0, 5);
 
 	if (ImGui::Button("Regenerate Mesh")) {
 		chunkManager.DestroyChunks();
-		chunkManager.UpdateSettings(_scale, _amplitude, _frequency, _octave, _lacunarity, _persistance, _width, _height, _viewDistance);
+		chunkManager.UpdateSettings(_scale, _amplitude, _frequency, _octave, _lacunarity, _persistance, _width, _height, _depth, _viewDistance);
 	}
 	if (ImGui::Button("Reset Settings")) {
 		ResetToStartValues();

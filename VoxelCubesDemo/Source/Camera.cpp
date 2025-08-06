@@ -10,7 +10,7 @@ const glm::vec3& Camera::GetPosition() {
 }
 
 void Camera::HandleKeyboardInput(float deltaTime, GLFWwindow* window) {
-	float cameraSpeed = 10.0f * deltaTime;
+	float cameraSpeed = 100.0f * deltaTime;
 	int newState = glfwGetKey(window, GLFW_KEY_E);
 	if (newState == GLFW_PRESS && _oldState == GLFW_RELEASE) {
 		UpdateCursorState(window);

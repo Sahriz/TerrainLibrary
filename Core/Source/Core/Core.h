@@ -26,6 +26,16 @@ namespace Core {
 		GLuint ebo = 0;
 
 		bool gpuLoaded = false;
+
+		~PlaneMesh()
+    {
+        if (gpuLoaded) {
+            if (ebo) glDeleteBuffers(1, &ebo);
+            if (vboNormals) glDeleteBuffers(1, &vboNormals);
+            if (vboVertices) glDeleteBuffers(1, &vboVertices);
+            if (vao) glDeleteVertexArrays(1, &vao);
+        }
+    }
 	};
 	extern GLuint _vertexInitComputeShaderProgram;
 	extern GLuint _indexInitComputeShaderProgram;
@@ -54,7 +64,7 @@ namespace Core {
 	PlaneMesh CreateMarchingCubesTriangles(int width, int height, int depth, int offset, bool CleanUp, std::vector<float>& noiseMap, float iso, int triangleCount);
 	PlaneMesh CreateVoxel2DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp);
 	PlaneMesh CreateMarchingCubes3DMesh(int width, int height, int depth, glm::vec3 offset, bool CleanUp);
-	PlaneMesh CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp);
+	PlaneMesh CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5);
 	PlaneMesh CreateMarchingCubes3DMeshSmoothGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp);
 
 	int VoxelCubesQuadCount(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const std::vector<float>& noiseMap, bool CleanUp);

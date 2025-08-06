@@ -11,17 +11,18 @@ void ChunkManager::GenerateChunk(const glm::vec3& position) {
 	for (int x = -_viewDistance; x <= _viewDistance; x++) {
 		for (int y = -_viewDistance; y <= _viewDistance; y++) {
 			for (int z = -_viewDistance; z <= _viewDistance; z++) {
-				if (glm::abs(x * y * z) > _viewDistance * _viewDistance * _viewDistance / 1.5f) continue;
+				//if (glm::abs(x * y * z) > _viewDistance * _viewDistance * _viewDistance / 1.5f) continue;
 				glm::vec3 coord = playerChunk + glm::vec3(x, y, z);
 				//std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";
 				// Generate if not yet stored
-				if (_chunkMap.find(coord) == _chunkMap.end()) {
+				if (_chunkMap.find(coord) == _chunkMap.end() || _chunkMap[coord].vertices.empty()) {
 					glm::vec3 offset = coord * glm::vec3(_width, _height, _depth);
 					//Try generating the mesh with and without GPU to see the difference in speed! The function call is the same but the end of
 					//the function call is GPU for the gpu implementtion. Please do keep in mind the noise map is still using compute shaders
 					//even on the cpu implementation, so that is technically a speedup that should not be granted as a possitive for the CPU part
 					//of this code. 
-					_chunkMap[coord] = std::move(Core::CreateMarchingCubes3DMeshGPU(_width, _height, _depth, offset, false)); 
+					_chunkMap[coord] = std::move(Core::CreateMarchingCubes3DMeshGPU(_width, _height, _depth, offset, false, _scale, _frequency, _persistance, _lacunarity, _octave)); 
+					std::cout << "just made a chunk at" << coord.x << " " << coord.y << " " << coord.z << "\n";
 				}
 			}
 		}
@@ -36,7 +37,20 @@ void ChunkManager::DestroyChunks() {
 }
 
 void ChunkManager::DeleteChunk(Core::PlaneMesh& mesh) {
-	mesh.vertices.clear();
-	mesh.normals.clear();
-	mesh.indices.clear();
+	std::vector<glm::fvec3>().swap(mesh.vertices);
+	std::vector<glm::fvec3>().swap(mesh.normals);
+	std::vector<int>().swap(mesh.indices);
+
+	// Free GPU memory
+	if (mesh.vboVertices) glDeleteBuffers(1, &mesh.vboVertices);
+	if (mesh.vboNormals) glDeleteBuffers(1, &mesh.vboNormals);
+	if (mesh.ebo) glDeleteBuffers(1, &mesh.ebo);
+	if (mesh.vao) glDeleteVertexArrays(1, &mesh.vao);
+
+	mesh.ebo = 0;
+	mesh.vboNormals = 0;
+	mesh.vboVertices = 0;
+	mesh.vao = 0;
+
+	mesh.gpuLoaded = false;
 }

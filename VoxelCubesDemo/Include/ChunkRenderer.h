@@ -15,6 +15,13 @@ public:
 		_viewDistance = viewDistance;
 	}
 
+	void UpdateVariables(int width, int height, int depth, int viewDistance) {
+		_width = width;
+		_height = height;
+		_depth = depth;
+		_viewDistance = viewDistance;
+	}
+
 	void UpdateActiveChunk(const glm::vec3& position, ChunkManager& chunkManager);
 
 	std::unordered_set<glm::vec2>& GetActiveChunkSet() {
