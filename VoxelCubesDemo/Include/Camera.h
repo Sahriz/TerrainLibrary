@@ -10,7 +10,7 @@ public:
 
 	}
 	Camera(GLFWwindow* window) {
-		_cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+		_cameraPos = glm::vec3(0.0f, 180.0f, 3.0f);
 		_cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 		_cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		_yaw = -90.0f;

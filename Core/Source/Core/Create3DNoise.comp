@@ -11,6 +11,14 @@ uniform int height;
 uniform int depth;
 uniform vec3 offset;
 
+uniform float amplitude;
+uniform float frequency;
+uniform float persistance;
+uniform float lacunarity;
+uniform int octaves;
+uniform bool useHeightDropoff;
+
+
 vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
 vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
 vec3 fade(vec3 t) {return t*t*t*(t*(t*6.0-15.0)+10.0);}
@@ -92,21 +100,29 @@ void main(){
 
 
 	//vec3 position = vec3(float(xPos), float(yPos), float(zPos));
-	vec3 position = vec3((xPos + offset.x)/width, (yPos + offset.y)/height,(zPos + offset.z)/depth);
+	vec3 position = vec3((xPos + offset.x)/width, (yPos + offset.y)/width,(zPos + offset.z)/depth);
 	
 	float noiseValue = 0;
-	float amplitude = 1.0f;
-	float frequency = 2.0f;
+	float amp = amplitude;
+	float freq = frequency;
 	float maxAmp = 0.0f;
 	//float scale = 1.0f / 0.5f; // Adjust scale as needed
-	for (int i = 0; i < 5; i++){
-		float noise = amplitude * cnoise(frequency*position);
-		maxAmp += amplitude;
-		amplitude *= 0.5f;
-		frequency *= 2.0f;
+	for (int i = 0; i < octaves; i++){
+		float noise = amp * cnoise(freq*position);
+		maxAmp += amp;
+		amp *= persistance;
+		freq *= lacunarity;
 		noiseValue += noise;
 	}
 	noiseValue /= maxAmp;
 	int index = int(xPos) + int(yPos) * width + int(zPos) * width * height;
+	if(useHeightDropoff){
+		float t = float(yPos) / float(height);
+		float q = 1.0f - t;
+		float falloffBase = pow(t, 2.0f) * 2.0f - 0.5f;
+		noiseValue -= falloffBase;
+	}
+	
+
 	noiseMap[index] = noiseValue;
 }

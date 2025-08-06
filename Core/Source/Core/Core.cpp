@@ -642,7 +642,7 @@ namespace Core {
 
 		return noiseMap;
 	}
-	std::vector<float> CreateFlat3DNoiseMap(const int width,const int height,const int depth,const glm::vec3 offset, bool CleanUp) {
+	std::vector<float> CreateFlat3DNoiseMap(const int width,const int height,const int depth,const glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff) {
 		std::vector<float> noiseMap;
 		int sizeOfNoiseMap = width * height * depth;
 		noiseMap.resize(sizeOfNoiseMap);
@@ -655,8 +655,14 @@ namespace Core {
 
 		GLint widthLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "width");
 		GLint heightLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "height");
-		GLint depthLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "depth");;
+		GLint depthLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "depth");
 		GLint offsetLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "offset");
+		GLint amiplitudeLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "amplitude");
+		GLint frequencyLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "frequency");
+		GLint persistanceLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "persistance");
+		GLint lacunarityLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "lacunarity");
+		GLint octavesLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "octaves");
+		GLint dropoffLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "useHeightDropoff");
 
 		glUseProgram(_3dNoiseMapComputeShader);
 
@@ -664,6 +670,12 @@ namespace Core {
 		glUniform1i(heightLoc, height);
 		glUniform1i(depthLoc, depth);
 		glUniform3fv(offsetLoc, 1, &offset[0]);
+		glUniform1f(amiplitudeLoc, amplitude);
+		glUniform1f(frequencyLoc, frequency);
+		glUniform1f(persistanceLoc, persistance);
+		glUniform1f(lacunarityLoc, lacunarity);
+		glUniform1i(octavesLoc, octaves);
+		glUniform1i(dropoffLoc, useDropoff);
 
 		glDispatchCompute(
 			(GLuint)ceil(width / 8.0f),
@@ -1236,7 +1248,6 @@ namespace Core {
 		if (ptr) {
 			vertexCount = *ptr;
 			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-			std::cout << vertexCount << "\n";
 		}
 		else {
 			std::cout << "Something went wrong in CreateVertices";
@@ -1279,7 +1290,7 @@ namespace Core {
 
 		glGenBuffers(1, &ssboIndex);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndex);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, indices.size() * sizeof(float), indices.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, indices.size() * sizeof(int), indices.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboIndex);
 
 		int initialIndex = 0;
@@ -1336,17 +1347,17 @@ namespace Core {
 
 
 
-	PlaneMesh CreateVoxelCubes3DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp) {
+	PlaneMesh CreateVoxelCubes3DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff) {
 		PlaneMesh planeData;
-		int paddedHeight = height + 1;
-		int paddedWidth = width + 1;
-		int paddedDepth = depth + 1;
+		int paddedWidth = width + 3;
+		int paddedHeight = height + 3;
+		int paddedDepth = depth + 3;
 
 		glm::vec3 offset3D = glm::vec3(offset.x, 0, offset.y);
 
-		std::vector<float> noiseMap = CreateFlat3DNoiseMap(paddedHeight, paddedWidth, paddedDepth, offset3D, true);
-		int quadCount = VoxelCubesQuadCount(paddedHeight, paddedWidth, paddedDepth, offset3D, noiseMap, CleanUp);
-		VoxelCubesGeometryInit(planeData, paddedHeight, paddedWidth, paddedDepth, offset3D, noiseMap, quadCount, CleanUp);
+		std::vector<float> noiseMap = CreateFlat3DNoiseMap(paddedWidth, paddedHeight, paddedDepth, offset3D, true, amplitude, frequency, persistance, lacunarity, octaves, useDropoff);
+		int quadCount = VoxelCubesQuadCount(paddedWidth, paddedHeight, paddedDepth, offset3D, noiseMap, CleanUp);
+		VoxelCubesGeometryInit(planeData, paddedWidth, paddedHeight, paddedDepth, offset3D, noiseMap, quadCount, CleanUp);
 
 
 		return planeData;

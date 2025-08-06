@@ -34,22 +34,24 @@ uniform vec3 offset;
 
 bool IsSolid(int x, int y, int z)
 {
-    if(x >= gridWidth || y >= gridHeight || z >= gridDepth) return false;
+    if(x >= gridWidth-1 || y >= gridHeight-1 || z >= gridDepth-1) return false;
 
-    return noiseMap[x + y * (gridWidth+1) + z * (gridWidth+1) * (gridHeight+1)] > 0;
+    return noiseMap[x + y * (gridWidth) + z * (gridWidth) * (gridHeight)] > 0;
 }
 
 void main(){
 
 	vec3 position = gl_GlobalInvocationID.xyz;
 
-    if(position.x >= gridWidth || position.y >= gridHeight, position.z >= gridDepth) return;
-    
-    if (!IsSolid(int(position.x), int(position.y), int(position.z))) return;
-    
-    vec3 base = vec3(int(position.x), int(position.y), int(position.z)) + vec3(offset.x, offset.y, offset.z);
+    vec3 paddedNoisePosition = position + vec3(1,1,1);
 
-	if (!IsSolid(int(position.x) + 1, int(position.y), int(position.z)))
+    if(paddedNoisePosition.x >= gridWidth-1 || paddedNoisePosition.y >= gridHeight-1, paddedNoisePosition.z >= gridDepth-1) return;
+    
+    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z))) return;
+    
+    vec3 base = vec3(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z)) + vec3(offset.x, offset.y, offset.z);
+
+	if (!IsSolid(int(paddedNoisePosition.x) + 1, int(paddedNoisePosition.y), int(paddedNoisePosition.z)))
     {
         vec3 v0 = base + cornerOffset[1];
         vec3 v1 = base + cornerOffset[5];
@@ -104,7 +106,7 @@ void main(){
         indices[baseIndex + 4] = int(Index + 2);
         indices[baseIndex + 5] = int(Index + 3);
     }
-    if (!IsSolid(int(position.x) - 1, int(position.y), int(position.z)))
+    if (!IsSolid(int(paddedNoisePosition.x) - 1, int(paddedNoisePosition.y), int(paddedNoisePosition.z)))
     {
         vec3 v0 = base + cornerOffset[3];
         vec3 v1 = base + cornerOffset[7];
@@ -157,7 +159,7 @@ void main(){
         indices[baseIndex + 4] = int(Index + 2);
         indices[baseIndex + 5] = int(Index + 3);
     }
-    if (!IsSolid(int(position.x), int(position.y) + 1, int(position.z)))
+    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y) + 1, int(paddedNoisePosition.z)))
     {
         vec3 v0 = base + cornerOffset[4];
         vec3 v1 = base + cornerOffset[7];
@@ -210,7 +212,7 @@ void main(){
         indices[baseIndex + 4] = int(Index + 2);
         indices[baseIndex + 5] = int(Index + 3);
     }
-    if (!IsSolid(int(position.x), int(position.y) - 1, int(position.z)))
+    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y) - 1, int(paddedNoisePosition.z)))
     {
         vec3 v0 = base + cornerOffset[1];
         vec3 v1 = base + cornerOffset[2];
@@ -264,7 +266,7 @@ void main(){
         indices[baseIndex + 5] = int(Index + 3);
     }
 
-    if (!IsSolid(int(position.x), int(position.y), int(position.z) + 1))
+    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z) + 1))
     {
         vec3 v0 = base + cornerOffset[2];
         vec3 v1 = base + cornerOffset[6];
@@ -317,7 +319,7 @@ void main(){
         indices[baseIndex + 4] = int(Index + 2);
         indices[baseIndex + 5] = int(Index + 3);
     }
-    if (!IsSolid(int(position.x), int(position.y), int(position.z) - 1))
+    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z) - 1))
     {
         vec3 v0 = base + cornerOffset[0];
         vec3 v1 = base + cornerOffset[4];

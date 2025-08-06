@@ -46,10 +46,10 @@ public:
     }
     
 private:
-    int _width = 32;
-    int _height = 32;
-    int _depth = 32;
-    int _viewDistance = 2;
+    int _width = 16;
+    int _height = 256;
+    int _depth = 16;
+    int _viewDistance = 12;
     ChunkRenderer _chunkRenderer = ChunkRenderer(_width, _height, _depth, _viewDistance);
 
     glm::mat4 _identity;

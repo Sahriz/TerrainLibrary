@@ -19,45 +19,47 @@ uniform vec3 offset;
 
 bool IsSolid(int x, int y, int z)
 {
-    return noiseMap[x + z * (gridWidth ) + y * (gridWidth ) * (gridHeight )] > 0;
+    if(x >= gridWidth-1 || y >= gridHeight-1 || z >= gridDepth-1) return false;
+
+    return noiseMap[x + y * (gridWidth) + z * (gridWidth) * (gridHeight)] > 0;
 }
 
 void main() {
     
     vec3 position = gl_GlobalInvocationID.xyz;
 
+    vec3 paddedNoisePosition = position + vec3(1,1,1);
     
+    if(paddedNoisePosition.x >= gridWidth-1 || paddedNoisePosition.y >= gridHeight-1 || paddedNoisePosition.z >= gridDepth-1) return;
     
-    if(position.x >= gridWidth || position.y >= gridHeight, position.z >= gridDepth) return;
-    
-    if (!IsSolid(int(position.x), int(position.y), int(position.z)))
+    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z)))
         return;
     
-    vec3 base = vec3(int(position.x),int(position.y),int(position.z)) + vec3(offset.x, offset.x, offset.x);
+    vec3 base = vec3(int(paddedNoisePosition.x),int(paddedNoisePosition.y),int(paddedNoisePosition.z)) + vec3(offset.x, offset.x, offset.x);
     
-    if (!IsSolid(int(position.x) + 1, int(position.y), int(position.z)))
+    if (!IsSolid(int(paddedNoisePosition.x) + 1, int(paddedNoisePosition.y), int(paddedNoisePosition.z)))
     {
         atomicAdd(counter, 1);
     }
-    if (!IsSolid(int(position.x) - 1, int(position.y), int(position.z)))
-    {
-        atomicAdd(counter, 1);
-    }
-
-    if (!IsSolid(int(position.x), int(position.y) + 1, int(position.z)))
-    {
-        atomicAdd(counter, 1);
-    }
-    if (!IsSolid(int(position.x), int(position.y) - 1, int(position.z)))
+    if (!IsSolid(int(paddedNoisePosition.x) - 1, int(paddedNoisePosition.y), int(paddedNoisePosition.z)))
     {
         atomicAdd(counter, 1);
     }
 
-    if (!IsSolid(int(position.x), int(position.y), int(position.z) + 1))
+    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y) + 1, int(paddedNoisePosition.z)))
     {
         atomicAdd(counter, 1);
     }
-    if (!IsSolid(int(position.x), int(position.y), int(position.z) - 1))
+    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y) - 1, int(paddedNoisePosition.z)))
+    {
+        atomicAdd(counter, 1);
+    }
+
+    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z) + 1))
+    {
+        atomicAdd(counter, 1);
+    }
+    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z) - 1))
     {
         atomicAdd(counter, 1);
     }

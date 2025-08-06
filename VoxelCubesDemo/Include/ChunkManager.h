@@ -64,10 +64,10 @@ private:
 	int _octave = 5;
 	float _lacunarity = 2.0f;
 	float _persistance = 0.5f;
-	int _width = 32;
-	int _height = 32;
-	int _depth = 32;
-	int _viewDistance = 2;
+	int _width = 16;
+	int _height = 256;
+	int _depth = 16;
+	int _viewDistance = 12;
 
 	void DeleteChunk(Core::PlaneMesh& mesh);
 
