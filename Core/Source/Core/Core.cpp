@@ -1237,8 +1237,8 @@ namespace Core {
 		glUniform1i(heightLoc, heigth);
 		glUniform1i(depthLoc, depth);
 
-		glDispatchCompute((GLuint)ceil((width - 2) / 8.0f),
-			(GLuint)ceil((heigth - 2) / 8.0f), (GLuint)ceil((depth - 2) / 8.0f));
+		glDispatchCompute((GLuint)ceil((width) / 8.0f),
+			(GLuint)ceil((heigth) / 8.0f), (GLuint)ceil((depth) / 8.0f));
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
@@ -1317,8 +1317,8 @@ namespace Core {
 		glUniform1i(depthLoc, depth);
 		glUniform3fv(offsetLoc, 1, &offset[0]);
 
-		glDispatchCompute((GLuint)ceil((width-2) / 8.0f),
-			(GLuint)ceil((heigth-2) / 8.0f), (GLuint)ceil((depth-2) / 8.0f));
+		glDispatchCompute((GLuint)ceil((width) / 8.0f),
+			(GLuint)ceil((heigth) / 8.0f), (GLuint)ceil((depth) / 8.0f));
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertex);
@@ -1349,9 +1349,9 @@ namespace Core {
 
 	PlaneMesh CreateVoxelCubes3DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff) {
 		PlaneMesh planeData;
-		int paddedWidth = width + 3;
-		int paddedHeight = height + 3;
-		int paddedDepth = depth + 3;
+		int paddedWidth = width + 2;
+		int paddedHeight = height + 2;
+		int paddedDepth = depth + 2;
 
 		glm::vec3 offset3D = glm::vec3(offset.x, 0, offset.y);
 

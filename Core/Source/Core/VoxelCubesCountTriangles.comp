@@ -29,7 +29,7 @@ void main() {
 
     vec3 paddedNoisePosition = vec3(int(position.x),int(position.y),int(position.z)) + vec3(1,1,1);
     
-    if(paddedNoisePosition.x >= gridWidth-2 || paddedNoisePosition.y >= gridHeight-2 || paddedNoisePosition.z >= gridDepth-2) return;
+    if(paddedNoisePosition.x >= gridWidth-1 || paddedNoisePosition.y >= gridHeight-1 || paddedNoisePosition.z >= gridDepth-1) return;
     
     if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z))) return;
     
