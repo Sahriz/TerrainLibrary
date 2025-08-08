@@ -6,6 +6,14 @@ layout(std430, binding = 0) buffer noiseBuffer{
 	float noiseMap[];
 };
 
+layout(std430, binding = 1) buffer maxValueBuffer{
+	float maxValue;
+};
+
+layout(std430, binding = 2) buffer minValueBuffer{
+	float minValue;
+};
+
 uniform int width;
 uniform int height;
 uniform int depth;
@@ -114,13 +122,21 @@ void main(){
 		noiseValue += noise;
 	}
 	noiseValue /= maxAmp;
-	int index = int(xPos) + int(yPos) * width + int(zPos) * width * height;
+	uint index = xPos + yPos * uint(width) + zPos * uint(width) * uint(height);
 	if(useHeightDropoff){
 		float t = float(yPos) / float(height);
 		float falloffBase = pow(t, 3.5f) * 2.0f - 0.7f;
 		noiseValue -= falloffBase;
+		if (noiseValue < 0.0f){
+			noiseValue = 0.0f;
+		}
 	}
-	
+	if(noiseValue > maxValue){
+		maxValue = noiseValue;
+	}
+	if(noiseValue < minValue){
+		minValue = noiseValue;
+	}
 
 	noiseMap[index] = noiseValue;
 }

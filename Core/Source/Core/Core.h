@@ -13,7 +13,17 @@
 #include <iomanip>
 
 namespace Core {
-
+	struct SplinePoint
+	{
+		SplinePoint(float x, float y) : position(x, y) {}
+		glm::vec2 position; //x, y
+	};
+	struct Spline
+	{
+		Spline() = default;
+		std::vector<SplinePoint> points; //list of points in the spline
+		bool closed = false; //if the spline is closed or not
+	};
 	struct PlaneMesh
 	{
 		std::vector<glm::fvec3> vertices; //coordinates (x, y, z)
@@ -28,14 +38,20 @@ namespace Core {
 		bool gpuLoaded = false;
 
 		~PlaneMesh()
-    {
-        if (gpuLoaded) {
-            if (ebo) glDeleteBuffers(1, &ebo);
-            if (vboNormals) glDeleteBuffers(1, &vboNormals);
-            if (vboVertices) glDeleteBuffers(1, &vboVertices);
-            if (vao) glDeleteVertexArrays(1, &vao);
-        }
-    }
+		{
+			if (gpuLoaded) {
+				if (ebo) glDeleteBuffers(1, &ebo);
+				if (vboNormals) glDeleteBuffers(1, &vboNormals);
+				if (vboVertices) glDeleteBuffers(1, &vboVertices);
+				if (vao) glDeleteVertexArrays(1, &vao);
+			}
+		}
+	};
+	struct NoiseMapData
+	{
+		std::vector<float> noiseMap;
+		float minValue = 0.0f;
+		float maxValue = 0.0f;
 	};
 	extern GLuint _vertexInitComputeShaderProgram;
 	extern GLuint _indexInitComputeShaderProgram;
@@ -46,12 +62,17 @@ namespace Core {
 	extern GLuint _voxelCubesGeometryInitComputeShader;
 	extern GLuint _smoothMarchingCubesVertCreatorComputeShader;
 	extern GLuint _voxelCubesTriangleCounterComputeShader;
+	extern GLuint _normalisedNoiseMapComputeShader;
+	extern GLuint _splineNoiseEvaluationComputeShader;
 
 	void Init();
 	void Cleanup();
 
 	std::vector<float> CreateFlat2DNoiseMap(const int width, const int height, const int depth, const glm::vec2 offset, bool CleanUp);
 	std::vector<float> CreateFlat3DNoiseMap(const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = false);
+	void CreateFlat3DNoiseMap(NoiseMapData& noiseMapData, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = false);
+	void NormaliseNoiseMap(NoiseMapData& noiseMapData, int width, int height, int depth, bool CleanUp);
+	void SampleSplineCurve(NoiseMapData& noiseMapData, int width, int height, int depth, const Spline& spline);
 
 	void CreateVertices(PlaneMesh& planeData, int width, int height, glm::ivec2 offset = glm::ivec2(0,0), bool CleanUp = true);
 	void CreateIndices(PlaneMesh& planeData, int width, int height, bool CleanUp);

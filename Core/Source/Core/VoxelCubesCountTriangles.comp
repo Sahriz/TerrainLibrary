@@ -20,7 +20,7 @@ uniform vec3 offset;
 bool IsSolid(int x, int y, int z)
 {
     int index = x + y * (gridWidth) + z * (gridWidth) * (gridHeight);
-    return noiseMap[index] > 0;
+    return noiseMap[index] > 0.5;
 }
 
 void main() {
