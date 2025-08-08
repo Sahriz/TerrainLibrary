@@ -14,7 +14,7 @@ void ChunkManager::GenerateChunk(const glm::vec3& position) {
 				glm::vec2 coord = playerChunk + glm::vec2(x, z);
 				//std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";
 				// Generate if not yet stored
-				if (_chunkMap.find(coord) == _chunkMap.end() || _chunkMap[coord].vertices.empty()) {
+				if (_chunkMap.find(coord) == _chunkMap.end() ) {
 					glm::vec2 offset = coord * glm::vec2(_width, _depth);
 					//Try generating the mesh with and without GPU to see the difference in speed! The function call is the same but the end of
 					//the function call is GPU for the gpu implementtion. Please do keep in mind the noise map is still using compute shaders

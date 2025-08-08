@@ -23,7 +23,7 @@ void main(){
 	uint index = xPos + yPos * uint(width) + zPos * uint(width) * uint(height);
 	
 	float noiseValue = noiseMap[index];
-	noiseValue = (noiseValue + 1.0f) * 0.5f; // Normalize to [0, 1]
+	//noiseValue = (noiseValue + 1.0f) * 0.5f; // Normalize to [0, 1]
 
 	noiseMap[index] = noiseValue;
 }

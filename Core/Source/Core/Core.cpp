@@ -1540,7 +1540,8 @@ namespace Core {
 
 		Spline spline;
 		spline.points.push_back(SplinePoint(0.0f,0.0f));
-		spline.points.push_back(SplinePoint(0.7f, 1.0f));
+		spline.points.push_back(SplinePoint(0.2f, 0.4f));
+		spline.points.push_back(SplinePoint(1.0f, 0.7f));
 
 		CreateFlat3DNoiseMap(noiseMapData, paddedWidth, paddedHeight, paddedDepth, offset3D, true, amplitude, frequency, persistance, lacunarity, octaves, true);
 		NormaliseNoiseMap(noiseMapData, paddedWidth, paddedHeight, paddedDepth, true);
