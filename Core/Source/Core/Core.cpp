@@ -1540,13 +1540,17 @@ namespace Core {
 
 		Spline spline;
 		spline.points.push_back(SplinePoint(0.0f,0.0f));
-		spline.points.push_back(SplinePoint(0.2f, 0.4f));
-		spline.points.push_back(SplinePoint(1.0f, 0.7f));
+		//spline.points.push_back(SplinePoint(0.1f, 0.4f));
+		//spline.points.push_back(SplinePoint(0.2f, 1.0f));
+		//spline.points.push_back(SplinePoint(0.4f, 0.4f));
+		//spline.points.push_back(SplinePoint(0.5f, 1.0f));
+		spline.points.push_back(SplinePoint(1.0f,1.0f));
 
 		CreateFlat3DNoiseMap(noiseMapData, paddedWidth, paddedHeight, paddedDepth, offset3D, true, amplitude, frequency, persistance, lacunarity, octaves, true);
 		NormaliseNoiseMap(noiseMapData, paddedWidth, paddedHeight, paddedDepth, true);
 		SampleSplineCurve(noiseMapData, paddedWidth, paddedHeight, paddedDepth, spline);
-		//std::cout << "MinValue: " << noiseMapData.minValue << " | MaxValue: " << noiseMapData.maxValue << "\n";
+		//if(noiseMapData.minValue < -0.866f || noiseMapData.maxValue > 0.866f)
+			//std::cout << "MinValue: " << noiseMapData.minValue << " | MaxValue: " << noiseMapData.maxValue << "\n";
 		
 		int quadCount = VoxelCubesQuadCount(paddedWidth, paddedHeight, paddedDepth, offset3D, noiseMapData.noiseMap, CleanUp);
 		VoxelCubesGeometryInit(planeData, paddedWidth, paddedHeight, paddedDepth, offset3D, noiseMapData.noiseMap, quadCount, CleanUp);

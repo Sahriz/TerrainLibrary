@@ -200,13 +200,15 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	//std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
 	//std::cout << "FPS: " << fps << std::endl << std::flush;
 	glUniform1f(_timeLocation, timeValue);
-
+	glm::vec3 camPos = _camera.GetPosition();
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 	ImGui::SetNextWindowSize(ImVec2(380, 350), 0);
 	ImGui::Begin("Settings Panel  |  Press E to access");
 	ImGui::Text("Mesh Settings");
+	ImGui::Text("Camera Position: X: %.2f, Y: %.2f, Z: %.2f",
+		camPos.x, camPos.y, camPos.z);
 	ImGui::SliderInt("Width", &_width, 8, 32);
 	ImGui::SliderInt("Height", &_height, 8, 256);
 	ImGui::SliderInt("Depth", &_depth, 8, 32);
