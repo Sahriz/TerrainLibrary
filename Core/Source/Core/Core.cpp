@@ -753,7 +753,7 @@ namespace Core {
 
 		glDeleteBuffers(1, &ssboNoise);
 	}
-	void CreateFlat3DNoiseMapPipeLine(NoiseMapData& noiseMapData, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency, const bool useDropoff) {
+	void CreateFlat3DNoiseMapPipeLine(NoiseMapData& noiseMapData, const Spline& spline, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency, const bool useDropoff) {
 		int sizeOfNoiseMap = width * height * depth;
 		noiseMapData.noiseMap.resize(sizeOfNoiseMap);
 
@@ -763,12 +763,19 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMapData.noiseMap.size() * sizeof(float), noiseMapData.noiseMap.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
 
+		GLuint ssboSplinePoints;
+		glGenBuffers(1, &ssboSplinePoints);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboSplinePoints);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, spline.points.size() * sizeof(glm::vec2), spline.points.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboSplinePoints);
+
 		GLint widthLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "width");
 		GLint heightLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "height");
 		GLint depthLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "depth");
 		GLint offsetLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "offset");
 		GLint frequencyLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "frequency");
 		GLint dropoffLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "useHeightDropoff");
+		GLint splinePointsLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "splinePointsCount");
 
 		glUseProgram(_3DNoiseMapPipelineComputeShader);
 
@@ -778,6 +785,7 @@ namespace Core {
 		glUniform3fv(offsetLoc, 1, &offset[0]);
 		glUniform1f(frequencyLoc, frequency);
 		glUniform1i(dropoffLoc, useDropoff);
+		glUniform1i(splinePointsLoc, (int)spline.points.size());
 
 		glDispatchCompute(
 			(GLuint)ceil(width / 8.0f),
@@ -798,6 +806,7 @@ namespace Core {
 		}
 
 		glDeleteBuffers(1, &ssboNoise);
+		glDeleteBuffers(1, &ssboSplinePoints);
 	}
 	void NormaliseNoiseMap(NoiseMapData& noiseMapData, int width, int height, int depth, bool CleanUp) {
 		GLuint ssboNoise;
@@ -880,6 +889,7 @@ namespace Core {
 			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 			glDeleteBuffers(1, &ssboNoise);
 			glDeleteBuffers(1, &ssboSplinePoints);
+
 		}
 		else {
 			std::cout << "Something went wrong in CreateVertices";
@@ -1445,7 +1455,7 @@ namespace Core {
 		return vertexCount;
 	}
 
-	void VoxelCubesGeometryInit(PlaneMesh& planeData,int width, int heigth, int depth, glm::vec3 offset, const std::vector<float>& noiseMap, int quadCount, bool CleanUp) {
+	void VoxelCubesGeometryInit(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const std::vector<float>& noiseMap, int quadCount, bool CleanUp) {
 		std::vector<glm::vec3> vertices;
 		std::vector<glm::vec3> normals;
 		std::vector<int> indices;
@@ -1543,15 +1553,25 @@ namespace Core {
 
 		glm::vec3 offset3D = glm::vec3(offset.x, 0, offset.y);
 
-		Spline spline;
-		spline.points.push_back(SplinePoint(0.0f,0.0f));
-		//spline.points.push_back(SplinePoint(0.1f, 0.4f));
-		//spline.points.push_back(SplinePoint(0.2f, 1.0f));
-		//spline.points.push_back(SplinePoint(0.4f, 0.4f));
-		//spline.points.push_back(SplinePoint(0.5f, 1.0f));
-		spline.points.push_back(SplinePoint(1.0f,1.0f));
 
-		CreateFlat3DNoiseMapPipeLine(noiseMapData, paddedWidth, paddedHeight, paddedDepth, offset3D, true, frequency, true);
+
+		Spline spline;
+		spline.points.push_back(SplinePoint(0.0f,0.3f));
+		spline.points.push_back(SplinePoint(0.1f, 0.3f));
+		spline.points.push_back(SplinePoint(0.27f, 0.45f));
+		spline.points.push_back(SplinePoint(0.33f, 0.4f));
+		spline.points.push_back(SplinePoint(0.35f, 0.1f));
+		spline.points.push_back(SplinePoint(0.36f, 0.0f));
+		spline.points.push_back(SplinePoint(0.37f, 0.1f));
+		spline.points.push_back(SplinePoint(0.39f, 0.4f));
+		spline.points.push_back(SplinePoint(0.44f, 0.45f));
+		spline.points.push_back(SplinePoint(0.71f, 0.5f));
+		spline.points.push_back(SplinePoint(0.74f,1.45f));
+		spline.points.push_back(SplinePoint(0.8f, 1.45f));
+		spline.points.push_back(SplinePoint(0.83f, 0.5f));
+		spline.points.push_back(SplinePoint(1.0f,1.45f));
+
+		CreateFlat3DNoiseMapPipeLine(noiseMapData, spline, paddedWidth, paddedHeight, paddedDepth, offset3D, true, frequency, true);
 		//NormaliseNoiseMap(noiseMapData, paddedWidth, paddedHeight, paddedDepth, true);
 		//SampleSplineCurve(noiseMapData, paddedWidth, paddedHeight, paddedDepth, spline);
 		//if(noiseMapData.minValue < -0.866f || noiseMapData.maxValue > 0.866f)

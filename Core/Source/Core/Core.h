@@ -72,7 +72,7 @@ namespace Core {
 	std::vector<float> CreateFlat2DNoiseMap(const int width, const int height, const int depth, const glm::vec2 offset, bool CleanUp);
 	std::vector<float> CreateFlat3DNoiseMap(const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = false);
 	void CreateFlat3DNoiseMap(NoiseMapData& noiseMapData, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = false);
-	void CreateFlat3DNoiseMapPipeLine(NoiseMapData& noiseMapData, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency = 1.0f, const bool useDropoff = false);
+	void CreateFlat3DNoiseMapPipeLine(NoiseMapData& noiseMapData, const Spline& spline, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency = 1.0f, const bool useDropoff = false);
 	void NormaliseNoiseMap(NoiseMapData& noiseMapData, int width, int height, int depth, bool CleanUp);
 	void SampleSplineCurve(NoiseMapData& noiseMapData, int width, int height, int depth, const Spline& spline);
 
