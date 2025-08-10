@@ -22,7 +22,6 @@ void ChunkManager::GenerateChunk(const glm::vec3& position) {
 					//even on the cpu implementation, so that is technically a speedup that should not be granted as a possitive for the CPU part
 					//of this code. 
 					_chunkMap[coord] = std::move(Core::CreateMarchingCubes3DMeshGPU(_width, _height, _depth, offset, false, _scale, _frequency, _persistance, _lacunarity, _octave)); 
-					std::cout << "just made a chunk at" << coord.x << " " << coord.y << " " << coord.z << "\n";
 				}
 			}
 		}
