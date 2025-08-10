@@ -590,6 +590,7 @@ namespace Core {
 	GLuint _vertexDisplacementComputeShaderProgram = 0;
 	GLuint _normalInterpelationComputeShaderProgram = 0;
 	GLuint _3dNoiseMapComputeShader = 0;
+	GLuint _3DNoiseMapPipelineComputeShader = 0;
 	GLuint _marchingCubesTriCounterComputeShader = 0;
 	GLuint _marchingCubesTriCreatorComputeShader = 0;
 	GLuint _voxelCubesGeometryInitComputeShader = 0;
@@ -602,6 +603,7 @@ namespace Core {
 		_vertexDisplacementComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexDisplacement.comp");
 		_normalInterpelationComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapNormal.comp");
 		_3dNoiseMapComputeShader = CreateComputeShaderProgram("../Core/Source/Core/Create3DNoise.comp");
+		_3DNoiseMapPipelineComputeShader = CreateComputeShaderProgram("../Core/Source/Core/3DVoxelCubeNoise.comp");
 		_marchingCubesTriCounterComputeShader = CreateComputeShaderProgram("../Core/Source/Core/MarchingCubesCountTris.comp");
 		_marchingCubesTriCreatorComputeShader = CreateComputeShaderProgram("../Core/Source/Core/MarchingCubesCreateTris.comp");
 		_voxelCubesGeometryInitComputeShader = CreateComputeShaderProgram("../Core/Source/Core/VoxelCubesGeometryInit.comp");
@@ -615,6 +617,7 @@ namespace Core {
 		glDeleteProgram(_vertexDisplacementComputeShaderProgram);
 		glDeleteProgram(_normalInterpelationComputeShaderProgram);
 		glDeleteProgram(_3dNoiseMapComputeShader);
+		glDeleteProgram(_3DNoiseMapPipelineComputeShader);
 		glDeleteProgram(_marchingCubesTriCounterComputeShader);
 		glDeleteProgram(_marchingCubesTriCreatorComputeShader);
 		glDeleteProgram(_voxelCubesGeometryInitComputeShader);
@@ -791,6 +794,52 @@ namespace Core {
 		glDeleteBuffers(1, &ssboNoise);
 		glDeleteBuffers(1, &ssboMaxValue);
 		glDeleteBuffers(1, &ssboMinValue);
+	}
+	void CreateFlat3DNoiseMapPipeLine(NoiseMapData& noiseMapData, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency, const bool useDropoff) {
+		int sizeOfNoiseMap = width * height * depth;
+		noiseMapData.noiseMap.resize(sizeOfNoiseMap);
+
+		GLuint ssboNoise;
+		glGenBuffers(1, &ssboNoise);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMapData.noiseMap.size() * sizeof(float), noiseMapData.noiseMap.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
+
+		GLint widthLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "width");
+		GLint heightLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "height");
+		GLint depthLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "depth");
+		GLint offsetLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "offset");
+		GLint frequencyLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "frequency");
+		GLint dropoffLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "useHeightDropoff");
+
+		glUseProgram(_3DNoiseMapPipelineComputeShader);
+
+		glUniform1i(widthLoc, width);
+		glUniform1i(heightLoc, height);
+		glUniform1i(depthLoc, depth);
+		glUniform3fv(offsetLoc, 1, &offset[0]);
+		glUniform1f(frequencyLoc, frequency);
+		glUniform1i(dropoffLoc, useDropoff);
+
+		glDispatchCompute(
+			(GLuint)ceil(width / 8.0f),
+			(GLuint)ceil(height / 8.0f),
+			(GLuint)ceil(depth / 8.0f)
+		);
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
+		float* ptr = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+		// Copy or use data
+		if (ptr) {
+			noiseMapData.noiseMap.assign(ptr, ptr + noiseMapData.noiseMap.size());
+			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		}
+		else {
+			std::cout << "Something went wrong in CreateVertices";
+		}
+
+		glDeleteBuffers(1, &ssboNoise);
 	}
 	void NormaliseNoiseMap(NoiseMapData& noiseMapData, int width, int height, int depth, bool CleanUp) {
 		GLuint ssboNoise;
@@ -1526,8 +1575,6 @@ namespace Core {
 		glDeleteBuffers(1, &ssboVertexCounter);
 	}
 
-
-
 	PlaneMesh CreateVoxelCubes3DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff) {
 		PlaneMesh planeData;
 		int paddedWidth = width + 2;
@@ -1546,9 +1593,9 @@ namespace Core {
 		//spline.points.push_back(SplinePoint(0.5f, 1.0f));
 		spline.points.push_back(SplinePoint(1.0f,1.0f));
 
-		CreateFlat3DNoiseMap(noiseMapData, paddedWidth, paddedHeight, paddedDepth, offset3D, true, amplitude, frequency, persistance, lacunarity, octaves, true);
-		NormaliseNoiseMap(noiseMapData, paddedWidth, paddedHeight, paddedDepth, true);
-		SampleSplineCurve(noiseMapData, paddedWidth, paddedHeight, paddedDepth, spline);
+		CreateFlat3DNoiseMapPipeLine(noiseMapData, paddedWidth, paddedHeight, paddedDepth, offset3D, true, frequency, true);
+		//NormaliseNoiseMap(noiseMapData, paddedWidth, paddedHeight, paddedDepth, true);
+		//SampleSplineCurve(noiseMapData, paddedWidth, paddedHeight, paddedDepth, spline);
 		//if(noiseMapData.minValue < -0.866f || noiseMapData.maxValue > 0.866f)
 			//std::cout << "MinValue: " << noiseMapData.minValue << " | MaxValue: " << noiseMapData.maxValue << "\n";
 		
