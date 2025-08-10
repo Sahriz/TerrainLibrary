@@ -716,30 +716,12 @@ namespace Core {
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMapData.noiseMap.size() * sizeof(float), noiseMapData.noiseMap.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
-		
-		GLuint ssboMaxValue;
-		float maxValue = -1000.0f;
-		glGenBuffers(1, &ssboMaxValue);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboMaxValue);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float), &maxValue, GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboMaxValue);
-
-		GLuint ssboMinValue;
-		float minValue = 1000.0f;
-		glGenBuffers(1, &ssboMinValue);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboMinValue);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(float), &minValue, GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboMinValue);
 
 		GLint widthLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "width");
 		GLint heightLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "height");
 		GLint depthLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "depth");
 		GLint offsetLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "offset");
-		GLint amiplitudeLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "amplitude");
 		GLint frequencyLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "frequency");
-		GLint persistanceLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "persistance");
-		GLint lacunarityLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "lacunarity");
-		GLint octavesLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "octaves");
 		GLint dropoffLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "useHeightDropoff");
 
 		glUseProgram(_3dNoiseMapComputeShader);
@@ -748,11 +730,7 @@ namespace Core {
 		glUniform1i(heightLoc, height);
 		glUniform1i(depthLoc, depth);
 		glUniform3fv(offsetLoc, 1, &offset[0]);
-		glUniform1f(amiplitudeLoc, amplitude);
 		glUniform1f(frequencyLoc, frequency);
-		glUniform1f(persistanceLoc, persistance);
-		glUniform1f(lacunarityLoc, lacunarity);
-		glUniform1i(octavesLoc, octaves);
 		glUniform1i(dropoffLoc, useDropoff);
 
 		glDispatchCompute(
@@ -772,28 +750,8 @@ namespace Core {
 		else {
 			std::cout << "Something went wrong in CreateVertices";
 		}
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboMaxValue);
-		float* maxPtr = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		if (maxPtr) {
-			noiseMapData.maxValue = *maxPtr;
-			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		}
-		else {
-			std::cout << "Something went wrong in CreateVertices";
-		}
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboMinValue);
-		float* minPtr = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		if (minPtr) {
-			noiseMapData.minValue = *minPtr;
-			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		}
-		else {
-			std::cout << "Something went wrong in CreateVertices";
-		}
 
 		glDeleteBuffers(1, &ssboNoise);
-		glDeleteBuffers(1, &ssboMaxValue);
-		glDeleteBuffers(1, &ssboMinValue);
 	}
 	void CreateFlat3DNoiseMapPipeLine(NoiseMapData& noiseMapData, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency, const bool useDropoff) {
 		int sizeOfNoiseMap = width * height * depth;

@@ -11,11 +11,7 @@ uniform int height;
 uniform int depth;
 uniform vec3 offset;
 
-uniform float amplitude;
 uniform float frequency;
-uniform float persistance;
-uniform float lacunarity;
-uniform int octaves;
 uniform bool useHeightDropoff;
 
 
@@ -105,7 +101,7 @@ void main(){
 	uniformPosition.y *= float(width);
 	float terrainValue = snoise(position * frequency);
 	
-	terrainValue = (terrainValue + 0.9) / (2.0 * 0.9);
+	//terrainValue = (terrainValue + 0.9) / (2.0 * 0.9);
 	
 	
 	if(useHeightDropoff){
