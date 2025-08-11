@@ -1403,13 +1403,6 @@ namespace Core {
 		return p1 + mu * (p2 - p1);
 	}
 
-	PlaneMesh CreateMarchingCubes3DMeshSmoothGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp) {
-		PlaneMesh planeData;
-
-
-		return planeData;
-	}
-
 	int VoxelCubesQuadCount(int width, int heigth, int depth, glm::vec3 offset,const std::vector<float>& noiseMap, bool CleanUp) {
 		GLuint ssboCounter;
 		GLuint ssboNoise;
@@ -1459,10 +1452,12 @@ namespace Core {
 		std::vector<glm::vec3> vertices;
 		std::vector<glm::vec3> normals;
 		std::vector<int> indices;
+		std::vector<glm::vec2> UVs;
 
 		vertices.resize(quadCount * 4);
 		normals.resize(quadCount * 4);
 		indices.resize(quadCount * 6);
+		UVs.resize(quadCount * 4);
 
 		GLuint ssboNoise;
 		GLuint ssboVertex;
@@ -1470,6 +1465,7 @@ namespace Core {
 		GLuint ssboIndex;
 		GLuint ssboIndexCounter;
 		GLuint ssboVertexCounter;
+		GLuint ssboUV;
 
 		glGenBuffers(1, &ssboNoise);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
@@ -1503,10 +1499,17 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(int), &initialVertex, GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, ssboVertexCounter);
 
+		glGenBuffers(1, &ssboUV);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboUV);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, UVs.size() * sizeof(glm::vec2), UVs.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, ssboUV);
+
 		GLint widthLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "gridWidth");
 		GLint heightLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "gridHeight");
 		GLint depthLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "gridDepth");
 		GLint offsetLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "offset");
+		GLint columnSizeLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "columns");
+		GLint rowSizeLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "rows");
 
 		glUseProgram(_voxelCubesGeometryInitComputeShader);
 
@@ -1514,6 +1517,8 @@ namespace Core {
 		glUniform1i(heightLoc, heigth);
 		glUniform1i(depthLoc, depth);
 		glUniform3fv(offsetLoc, 1, &offset[0]);
+		glUniform1f(columnSizeLoc, 3);
+		glUniform1f(rowSizeLoc, 16);
 
 		glDispatchCompute((GLuint)ceil((width) / 8.0f),
 			(GLuint)ceil((heigth) / 8.0f), (GLuint)ceil((depth) / 8.0f));
@@ -1552,8 +1557,6 @@ namespace Core {
 		NoiseMapData noiseMapData;
 
 		glm::vec3 offset3D = glm::vec3(offset.x, 0, offset.y);
-
-
 
 		Spline spline;
 		spline.points.push_back(SplinePoint(0.0f,0.3f));

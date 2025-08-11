@@ -88,7 +88,6 @@ namespace Core {
 	PlaneMesh CreateVoxel2DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp);
 	PlaneMesh CreateMarchingCubes3DMesh(int width, int height, int depth, glm::vec3 offset, bool CleanUp);
 	PlaneMesh CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5);
-	PlaneMesh CreateMarchingCubes3DMeshSmoothGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp);
 
 	int VoxelCubesQuadCount(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const std::vector<float>& noiseMap, bool CleanUp);
 	void VoxelCubesGeometryInit(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const std::vector<float>& noiseMap, bool CleanUp);

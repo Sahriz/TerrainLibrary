@@ -15,7 +15,7 @@ project "VoxelCubesDemo"
       "Shaders",
        "../Vendor/glm",
        "../Vendor/glm/gtc",
-
+       "../Vendor/stb",
 	  -- Include Core
 	  "../Core/Source",
       "../Vendor/glfw/include",

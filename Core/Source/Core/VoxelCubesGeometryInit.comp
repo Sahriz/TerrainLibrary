@@ -5,12 +5,15 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 layout(std430, binding = 0) buffer NoiseBuffer{
 	float noiseMap[];
 };
+
 layout(std430, binding = 1) buffer VertexBuffer{
 	float vertices[];
 };
+
 layout(std430, binding = 2) buffer NormalBuffer{
 	float normals[];
 };
+
 layout(std430, binding = 3) buffer IndexBuffer{
 	int indices[];
 };
@@ -18,8 +21,13 @@ layout(std430, binding = 3) buffer IndexBuffer{
 layout(std430, binding = 4) buffer IndexCounterBuffer{
 	int indexCounter;
 };
+
 layout(std430, binding = 5) buffer VertexCounterBuffer{
     int vertexCounter;
+};
+
+layout(std430, binding = 6) buffer UVBuffer{
+    vec2 uvs[];
 };
 
 vec3[] cornerOffset = { vec3(0.0f,0.0f, 0.0f), vec3(1.0f, 0.0f, 0.0f),
@@ -31,6 +39,11 @@ uniform int gridWidth;
 uniform int gridHeight;
 uniform int gridDepth;
 uniform vec3 offset;
+
+uniform float columns;
+uniform float rows;
+
+
 
 bool IsSolid(int x, int y, int z)
 {
@@ -49,6 +62,10 @@ void main(){
     if(!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z))) return;
     
     vec3 base = vec3(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z)) + vec3(offset.x, offset.y, offset.z);
+    float tileW = 1.0f / columns;
+    float tileH = 1.0f / rows;
+
+    int rowFromBottom = (16 - 1) - 0;
 
 	if (!IsSolid(int(paddedNoisePosition.x) + 1, int(paddedNoisePosition.y), int(paddedNoisePosition.z)))
     {
@@ -62,6 +79,7 @@ void main(){
         uint baseVertIndex = atomicAdd(vertexCounter, 4*3);
         uint baseIndex = atomicAdd(indexCounter, 6);
         uint Index = baseVertIndex / uint(3);
+    
 
         vertices[baseVertIndex + 0] = v0.x;
         vertices[baseVertIndex + 1] = v0.y;
@@ -94,6 +112,18 @@ void main(){
         normals[baseVertIndex + 9] = normal.x;
         normals[baseVertIndex + 10] = normal.y;
         normals[baseVertIndex + 11] = normal.z;
+
+        float columnIndex = 1.0f;
+        
+        float u_0 = columnIndex * tileW;
+        float v_0 = rowFromBottom * tileH;
+        float u_1 = u_0 + tileW;
+        float v_1 = v_0 + tileH;
+
+        uvs[Index + 0] = vec2(u_0,v_0);
+        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 2] = vec2(u_1,v_1);
+        uvs[Index + 3] = vec2(u_0,v_1);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);
@@ -147,6 +177,18 @@ void main(){
         normals[baseVertIndex + 9] = normal.x;
         normals[baseVertIndex + 10] = normal.y;
         normals[baseVertIndex + 11] = normal.z;
+
+        float columnIndex = 1.0f;
+
+        float u_0 = columnIndex * tileW;
+        float v_0 = rowFromBottom * tileH;
+        float u_1 = u_0 + tileW;
+        float v_1 = v_0 + tileH;
+
+        uvs[Index + 0] = vec2(u_0,v_0);
+        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 2] = vec2(u_1,v_1);
+        uvs[Index + 3] = vec2(u_0,v_1);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);
@@ -200,6 +242,18 @@ void main(){
         normals[baseVertIndex + 9] = normal.x;
         normals[baseVertIndex + 10] = normal.y;
         normals[baseVertIndex + 11] = normal.z;
+
+        float columnIndex = 0.0f;
+        
+        float u_0 = columnIndex * tileW;
+        float v_0 = rowFromBottom * tileH;
+        float u_1 = u_0 + tileW;
+        float v_1 = v_0 + tileH;
+
+        uvs[Index + 0] = vec2(u_0,v_0);
+        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 2] = vec2(u_1,v_1);
+        uvs[Index + 3] = vec2(u_0,v_1);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);
@@ -253,6 +307,18 @@ void main(){
         normals[baseVertIndex + 9] = normal.x;
         normals[baseVertIndex + 10] = normal.y;
         normals[baseVertIndex + 11] = normal.z;
+
+        float columnIndex = 2.0f;
+
+        float u_0 = columnIndex * tileW;
+        float v_0 = rowFromBottom * tileH;
+        float u_1 = u_0 + tileW;
+        float v_1 = v_0 + tileH;
+
+        uvs[Index + 0] = vec2(u_0,v_0);
+        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 2] = vec2(u_1,v_1);
+        uvs[Index + 3] = vec2(u_0,v_1);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);
@@ -307,6 +373,18 @@ void main(){
         normals[baseVertIndex + 9] = normal.x;
         normals[baseVertIndex + 10] = normal.y;
         normals[baseVertIndex + 11] = normal.z;
+
+        float columnIndex = 1.0f;
+
+        float u_0 = columnIndex * tileW;
+        float v_0 = rowFromBottom * tileH;
+        float u_1 = u_0 + tileW;
+        float v_1 = v_0 + tileH;
+
+        uvs[Index + 0] = vec2(u_0,v_0);
+        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 2] = vec2(u_1,v_1);
+        uvs[Index + 3] = vec2(u_0,v_1);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);
@@ -360,6 +438,18 @@ void main(){
         normals[baseVertIndex + 9] = normal.x;
         normals[baseVertIndex + 10] = normal.y;
         normals[baseVertIndex + 11] = normal.z;
+
+        float columnIndex = 1.0f;
+
+        float u_0 = columnIndex * tileW;
+        float v_0 = rowFromBottom * tileH;
+        float u_1 = u_0 + tileW;
+        float v_1 = v_0 + tileH;
+
+        uvs[Index + 0] = vec2(u_0,v_0);
+        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 2] = vec2(u_1,v_1);
+        uvs[Index + 3] = vec2(u_0,v_1);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);
