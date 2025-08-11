@@ -49,7 +49,7 @@ private:
     int _width = 32;
     int _height = 32;
     int _depth = 32;
-    int _viewDistance = 2;
+    int _viewDistance = 3;
     ChunkRenderer _chunkRenderer = ChunkRenderer(_width, _height, _depth, _viewDistance);
 
     glm::mat4 _identity;

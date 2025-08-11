@@ -1568,11 +1568,14 @@ namespace Core {
 		spline.points.push_back(SplinePoint(0.37f, 0.1f));
 		spline.points.push_back(SplinePoint(0.39f, 0.4f));
 		spline.points.push_back(SplinePoint(0.44f, 0.45f));
-		spline.points.push_back(SplinePoint(0.71f, 0.5f));
-		spline.points.push_back(SplinePoint(0.74f,1.45f));
-		spline.points.push_back(SplinePoint(0.8f, 1.45f));
-		spline.points.push_back(SplinePoint(0.83f, 0.5f));
-		spline.points.push_back(SplinePoint(1.0f,1.45f));
+		spline.points.push_back(SplinePoint(0.61f, 0.5f));
+		spline.points.push_back(SplinePoint(0.64f,1.45f));
+		spline.points.push_back(SplinePoint(0.7f, 1.45f));
+		spline.points.push_back(SplinePoint(0.73f, 0.2f));
+		spline.points.push_back(SplinePoint(0.91f, 0.2f));
+		spline.points.push_back(SplinePoint(0.96f, 1.55f));
+		spline.points.push_back(SplinePoint(0.98f, 1.55f));
+		spline.points.push_back(SplinePoint(1.0f, 0.2f));
 
 		CreateFlat3DNoiseMapPipeLine(noiseMapData, spline, paddedWidth, paddedHeight, paddedDepth, offset3D, true, frequency, true);
 		//NormaliseNoiseMap(noiseMapData, paddedWidth, paddedHeight, paddedDepth, true);
