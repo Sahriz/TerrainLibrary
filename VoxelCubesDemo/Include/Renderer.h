@@ -25,7 +25,7 @@
 #include "ChunkRenderer.h"
 #include "Core/Core.h"
 
-#include "stb_image.h"
+
 
 using ChunkCoord = glm::vec2;
 
@@ -51,7 +51,7 @@ private:
     int _width = 16;
     int _height = 256;
     int _depth = 16;
-    int _viewDistance = 24;
+    int _viewDistance = 16;
     ChunkRenderer _chunkRenderer = ChunkRenderer(_width, _height, _depth, _viewDistance);
 
     glm::mat4 _identity;
@@ -68,8 +68,8 @@ private:
     float _persistance = 0.5f;
     
 
-    int _screenWidth = 1280;
-    int _screenHeight = 720;
+    int _screenWidth = 1920;
+    int _screenHeight = 1080;
     glm::mat4 _perspectiveMat;
     
     Camera _camera;
@@ -83,6 +83,8 @@ private:
     GLint _modelMLocation;
     GLint _viewLoc;
     GLint _normalMatrixLocation;
+    GLint _textureUniformLoc;
+    GLuint textureID;
 
     void Init();
     std::string ReadFile(const std::string& filePath);

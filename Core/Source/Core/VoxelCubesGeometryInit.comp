@@ -66,7 +66,7 @@ void main(){
     float tileH = 1.0f / rows;
 
     int rowFromBottom = (16 - 1) - 0;
-
+    float epsilon = 0.001f;
 	if (!IsSolid(int(paddedNoisePosition.x) + 1, int(paddedNoisePosition.y), int(paddedNoisePosition.z)))
     {
         vec3 v0 = base + cornerOffset[1];
@@ -77,8 +77,9 @@ void main(){
         vec3 normal = vec3(1.f, 0.f, 0.f);
         
         uint baseVertIndex = atomicAdd(vertexCounter, 4*3);
-        uint baseIndex = atomicAdd(indexCounter, 6);
         uint Index = baseVertIndex / uint(3);
+        uint baseIndex = atomicAdd(indexCounter, 6);
+        
     
 
         vertices[baseVertIndex + 0] = v0.x;
@@ -115,15 +116,15 @@ void main(){
 
         float columnIndex = 1.0f;
         
-        float u_0 = columnIndex * tileW;
-        float v_0 = rowFromBottom * tileH;
-        float u_1 = u_0 + tileW;
-        float v_1 = v_0 + tileH;
+        float u_0 = columnIndex * tileW + epsilon;
+        float v_0 = rowFromBottom * tileH + epsilon;
+        float u_1 = u_0 + tileW - 2*epsilon;
+        float v_1 = v_0 + tileH - 2*epsilon;
 
         uvs[Index + 0] = vec2(u_0,v_0);
-        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 1] = vec2(u_0,v_1);
         uvs[Index + 2] = vec2(u_1,v_1);
-        uvs[Index + 3] = vec2(u_0,v_1);
+        uvs[Index + 3] = vec2(u_1,v_0);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);
@@ -180,15 +181,15 @@ void main(){
 
         float columnIndex = 1.0f;
 
-        float u_0 = columnIndex * tileW;
-        float v_0 = rowFromBottom * tileH;
-        float u_1 = u_0 + tileW;
-        float v_1 = v_0 + tileH;
+        float u_0 = columnIndex * tileW + epsilon;
+        float v_0 = rowFromBottom * tileH + epsilon;
+        float u_1 = u_0 + tileW - 2*epsilon;
+        float v_1 = v_0 + tileH - 2*epsilon;
 
         uvs[Index + 0] = vec2(u_0,v_0);
-        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 1] = vec2(u_0,v_1);
         uvs[Index + 2] = vec2(u_1,v_1);
-        uvs[Index + 3] = vec2(u_0,v_1);
+        uvs[Index + 3] = vec2(u_1,v_0);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);
@@ -245,15 +246,15 @@ void main(){
 
         float columnIndex = 0.0f;
         
-        float u_0 = columnIndex * tileW;
-        float v_0 = rowFromBottom * tileH;
-        float u_1 = u_0 + tileW;
-        float v_1 = v_0 + tileH;
+        float u_0 = columnIndex * tileW + epsilon;
+        float v_0 = rowFromBottom * tileH + epsilon;
+        float u_1 = u_0 + tileW - 2*epsilon;
+        float v_1 = v_0 + tileH - 2*epsilon;
 
         uvs[Index + 0] = vec2(u_0,v_0);
-        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 1] = vec2(u_0,v_1);
         uvs[Index + 2] = vec2(u_1,v_1);
-        uvs[Index + 3] = vec2(u_0,v_1);
+        uvs[Index + 3] = vec2(u_1,v_0);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);
@@ -310,15 +311,15 @@ void main(){
 
         float columnIndex = 2.0f;
 
-        float u_0 = columnIndex * tileW;
-        float v_0 = rowFromBottom * tileH;
-        float u_1 = u_0 + tileW;
-        float v_1 = v_0 + tileH;
+        float u_0 = columnIndex * tileW + epsilon;
+        float v_0 = rowFromBottom * tileH + epsilon;
+        float u_1 = u_0 + tileW - 2*epsilon;
+        float v_1 = v_0 + tileH - 2*epsilon;
 
         uvs[Index + 0] = vec2(u_0,v_0);
-        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 1] = vec2(u_0,v_1);
         uvs[Index + 2] = vec2(u_1,v_1);
-        uvs[Index + 3] = vec2(u_0,v_1);
+        uvs[Index + 3] = vec2(u_1,v_0);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);
@@ -376,15 +377,15 @@ void main(){
 
         float columnIndex = 1.0f;
 
-        float u_0 = columnIndex * tileW;
-        float v_0 = rowFromBottom * tileH;
-        float u_1 = u_0 + tileW;
-        float v_1 = v_0 + tileH;
+        float u_0 = columnIndex * tileW + epsilon;
+        float v_0 = rowFromBottom * tileH + epsilon;
+        float u_1 = u_0 + tileW - 2*epsilon;
+        float v_1 = v_0 + tileH - 2*epsilon;
 
         uvs[Index + 0] = vec2(u_0,v_0);
-        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 1] = vec2(u_0,v_1);
         uvs[Index + 2] = vec2(u_1,v_1);
-        uvs[Index + 3] = vec2(u_0,v_1);
+        uvs[Index + 3] = vec2(u_1,v_0);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);
@@ -441,15 +442,15 @@ void main(){
 
         float columnIndex = 1.0f;
 
-        float u_0 = columnIndex * tileW;
-        float v_0 = rowFromBottom * tileH;
-        float u_1 = u_0 + tileW;
-        float v_1 = v_0 + tileH;
+        float u_0 = columnIndex * tileW + epsilon;
+        float v_0 = rowFromBottom * tileH + epsilon;
+        float u_1 = u_0 + tileW - 2*epsilon;
+        float v_1 = v_0 + tileH - 2*epsilon;
 
         uvs[Index + 0] = vec2(u_0,v_0);
-        uvs[Index + 1] = vec2(u_1,v_0);
+        uvs[Index + 1] = vec2(u_0,v_1);
         uvs[Index + 2] = vec2(u_1,v_1);
-        uvs[Index + 3] = vec2(u_0,v_1);
+        uvs[Index + 3] = vec2(u_1,v_0);
         
         indices[baseIndex + 0] = int(Index);
         indices[baseIndex + 1] = int(Index + 1);

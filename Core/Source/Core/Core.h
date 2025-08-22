@@ -29,10 +29,12 @@ namespace Core {
 		std::vector<glm::fvec3> vertices; //coordinates (x, y, z)
 		std::vector<int> indices; //indices of the vertices to form triangles
 		std::vector<glm::fvec3> normals; //normals for each vertex
+		std::vector<glm::vec2> UVs;
 
 		GLuint vao = 0;
 		GLuint vboVertices = 0;
 		GLuint vboNormals = 0;
+		GLuint vboUVs = 0;
 		GLuint ebo = 0;
 
 		bool gpuLoaded = false;

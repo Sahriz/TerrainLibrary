@@ -44,6 +44,12 @@ void ChunkRenderer::SetupChunkRenderData(Core::PlaneMesh& mesh) {
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr); // location 1
 	glEnableVertexAttribArray(1);
 
+	glGenBuffers(1, &mesh.vboUVs);
+	glBindBuffer(GL_ARRAY_BUFFER, mesh.vboUVs);
+	glBufferData(GL_ARRAY_BUFFER, mesh.UVs.size() * sizeof(glm::vec2), mesh.UVs.data(), GL_STATIC_DRAW);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+	glEnableVertexAttribArray(2);
+
 	glGenBuffers(1, &mesh.ebo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ebo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(int), mesh.indices.data(), GL_STATIC_DRAW);
@@ -58,12 +64,14 @@ void ChunkRenderer::CleanupChunkRenderData(Core::PlaneMesh& mesh) {
 	glDeleteBuffers(1, &mesh.ebo);
 	glDeleteBuffers(1, &mesh.vboNormals);
 	glDeleteBuffers(1, &mesh.vboVertices);
+	glDeleteBuffers(1, &mesh.vboUVs);
 	glDeleteVertexArrays(1, &mesh.vao);
 
 	// Optional: Reset IDs to 0 (OpenGL default for "none")
 	mesh.ebo = 0;
 	mesh.vboNormals = 0;
 	mesh.vboVertices = 0;
+	mesh.vboUVs = 0;
 	mesh.vao = 0;
 
 	mesh.gpuLoaded = false;

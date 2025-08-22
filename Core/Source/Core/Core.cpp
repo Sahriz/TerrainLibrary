@@ -1531,19 +1531,25 @@ namespace Core {
 		}
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormal);
 		glm::vec3* normalsPtr = (glm::vec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		if (vertexPtr) {
+		if (normalsPtr) {
 			planeData.normals.assign(normalsPtr, normalsPtr + normals.size());
 		}
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndex);
 		int* IndexPtr = (int*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		if (vertexPtr) {
+		if (IndexPtr) {
 			planeData.indices.assign(IndexPtr, IndexPtr + indices.size());
+		}
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboUV);
+		glm::vec2* UVPtr = (glm::vec2*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+		if (UVPtr) {
+			planeData.UVs.assign(UVPtr, UVPtr + UVs.size());
 		}
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 		glDeleteBuffers(1, &ssboNoise);
 		glDeleteBuffers(1, &ssboVertex);
 		glDeleteBuffers(1, &ssboNormal);
 		glDeleteBuffers(1, &ssboIndex);
+		glDeleteBuffers(1, &ssboUV);
 		glDeleteBuffers(1, &ssboIndexCounter);
 		glDeleteBuffers(1, &ssboVertexCounter);
 	}
@@ -1586,7 +1592,11 @@ namespace Core {
 		int quadCount = VoxelCubesQuadCount(paddedWidth, paddedHeight, paddedDepth, offset3D, noiseMapData.noiseMap, CleanUp);
 		VoxelCubesGeometryInit(planeData, paddedWidth, paddedHeight, paddedDepth, offset3D, noiseMapData.noiseMap, quadCount, CleanUp);
 
-
+		if (offset == glm::vec2(0.0)) {
+			for (int i = 0; i < 30; i++) {
+				std::cout << planeData.UVs[i].x << "  " << planeData.UVs[i].y << "\n";
+			}
+		}
 		return planeData;
 	}
 }

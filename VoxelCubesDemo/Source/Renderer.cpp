@@ -1,5 +1,6 @@
 #include "Renderer.h"
 #define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 	Camera* cam = static_cast<Camera*>(glfwGetWindowUserPointer(window));
@@ -68,6 +69,7 @@ Renderer::Renderer() {
 	_modelMLocation = glGetUniformLocation(_shaderProgram, "uModel");
 	_viewLoc = glGetUniformLocation(_shaderProgram, "uView");
 	_normalMatrixLocation = glGetUniformLocation(_shaderProgram, "normalMatrix");
+	_textureUniformLoc = glGetUniformLocation(_shaderProgram, "uTexture");
 
 
 	glUniform1f(_widthLocation, _screenWidth);
@@ -76,6 +78,7 @@ Renderer::Renderer() {
 	glUniformMatrix4fv(_modelMLocation, 1, GL_FALSE, glm::value_ptr(_model));
 	glUniformMatrix4fv(_viewLoc, 1, GL_FALSE, glm::value_ptr(_view));
 	glUniformMatrix3fv(_normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(_normalMatrix));
+	
 
 
 	// Main loop
@@ -83,6 +86,48 @@ Renderer::Renderer() {
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glEnable(GL_DEPTH_TEST);
+
+	{
+		
+
+		int width, height, channels;
+		stbi_set_flip_vertically_on_load(true);
+		
+		unsigned char* data = stbi_load("../TerrainLibSpriteMap.png", &width, &height, &channels, 0);
+		if (!data) {
+			std::cerr << "Failed to load texture\n";
+			exit(1);
+		}
+
+		glGenTextures(1, &textureID);
+		glBindTexture(GL_TEXTURE_2D, textureID);
+
+		// Texture wrapping/filtering
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+		GLenum format = GL_RGB;
+		if (channels == 1)      format = GL_RED;
+		else if (channels == 3) format = GL_RGB;
+		else if (channels == 4) format = GL_RGBA;
+
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			format,             // internal format
+			width,
+			height,
+			0,
+			format,             // format of 'data'
+			GL_UNSIGNED_BYTE,
+			data
+		);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		stbi_image_free(data);
+	}
+
 	//Init();
 }
 
@@ -168,6 +213,9 @@ void Renderer::DrawChunks(ChunkManager& chunkManager) {
 	for (const glm::ivec2& coord : _chunkRenderer.GetActiveChunkSet()) {
 		Core::PlaneMesh& planeData = chunkMap[coord];
 		glUseProgram(_shaderProgram);
+		glActiveTexture(GL_TEXTURE0);                     // activate texture unit 0
+		glBindTexture(GL_TEXTURE_2D, textureID);          // bind our texture
+		glUniform1i(_textureUniformLoc, 0);                // tell shader "uTexture" uses GL_TEXTURE0
 		glBindVertexArray(planeData.vao);
 		glDrawElements(GL_TRIANGLES, planeData.indices.size(), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
@@ -193,6 +241,7 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	float fps = 1 / deltaTime;
 	_camera.HandleKeyboardInput(deltaTime, _window);
 	_view = _camera.GetViewMatrix();
+	
 	glUniformMatrix4fv(_viewLoc, 1, GL_FALSE, glm::value_ptr(_view));
 	//std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
 	//std::cout << "FPS: " << fps << std::endl << std::flush;
