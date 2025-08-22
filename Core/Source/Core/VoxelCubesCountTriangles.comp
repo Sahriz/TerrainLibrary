@@ -4,7 +4,7 @@
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 layout(std430, binding = 0) buffer noiseBuffer {
-    float noiseMap[];
+    int noiseMap[];
 };
 
 // Edge array: stores vertex index for each potential edge
@@ -20,7 +20,7 @@ uniform vec3 offset;
 bool IsSolid(int x, int y, int z)
 {
     int index = x + y * (gridWidth) + z * (gridWidth) * (gridHeight);
-    return noiseMap[index] > 0.5;
+    return noiseMap[index] >= 0;
 }
 
 void main() {

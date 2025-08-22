@@ -52,8 +52,9 @@ namespace Core {
 	struct NoiseMapData
 	{
 		std::vector<float> noiseMap;
-		float minValue = 0.0f;
-		float maxValue = 0.0f;
+	};
+	struct BlockIds {
+		std::vector<int> IDs;
 	};
 	extern GLuint _vertexInitComputeShaderProgram;
 	extern GLuint _indexInitComputeShaderProgram;
@@ -65,8 +66,8 @@ namespace Core {
 	extern GLuint _voxelCubesGeometryInitComputeShader;
 	extern GLuint _smoothMarchingCubesVertCreatorComputeShader;
 	extern GLuint _voxelCubesTriangleCounterComputeShader;
-	extern GLuint _normalisedNoiseMapComputeShader;
-	extern GLuint _splineNoiseEvaluationComputeShader;
+	extern GLuint _voxelTerrainPainterComputeShader;
+
 
 	void Init();
 	void Cleanup();
@@ -74,9 +75,8 @@ namespace Core {
 	std::vector<float> CreateFlat2DNoiseMap(const int width, const int height, const int depth, const glm::vec2 offset, bool CleanUp);
 	std::vector<float> CreateFlat3DNoiseMap(const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = false);
 	void CreateFlat3DNoiseMap(NoiseMapData& noiseMapData, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = false);
-	void CreateFlat3DNoiseMapPipeLine(NoiseMapData& noiseMapData, const Spline& spline, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency = 1.0f, const bool useDropoff = false);
-	void NormaliseNoiseMap(NoiseMapData& noiseMapData, int width, int height, int depth, bool CleanUp);
-	void SampleSplineCurve(NoiseMapData& noiseMapData, int width, int height, int depth, const Spline& spline);
+	void CreateFlat3DNoiseMapPipeLine(BlockIds& blockIDs, const Spline& spline, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency = 1.0f, const bool useDropoff = false);
+	void TerrainPaint(BlockIds& blockIDs, int width, int height, int depth);
 
 	void CreateVertices(PlaneMesh& planeData, int width, int height, glm::ivec2 offset = glm::ivec2(0,0), bool CleanUp = true);
 	void CreateIndices(PlaneMesh& planeData, int width, int height, bool CleanUp);
@@ -90,8 +90,9 @@ namespace Core {
 	PlaneMesh CreateVoxel2DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp);
 	PlaneMesh CreateMarchingCubes3DMesh(int width, int height, int depth, glm::vec3 offset, bool CleanUp);
 	PlaneMesh CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5);
+	
 
-	int VoxelCubesQuadCount(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const std::vector<float>& noiseMap, bool CleanUp);
-	void VoxelCubesGeometryInit(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const std::vector<float>& noiseMap, bool CleanUp);
+	int VoxelCubesQuadCount(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp);
+	void VoxelCubesGeometryInit(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp);
 	PlaneMesh CreateVoxelCubes3DMesh(int width, int heigth, int depth, glm::vec2 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = true);
 }

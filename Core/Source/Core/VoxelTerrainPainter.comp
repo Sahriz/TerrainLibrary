@@ -3,14 +3,20 @@
 // Compute shader - one thread per cube
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
-layout(std430, binding = 0) buffer noiseBuffer{
-	float noiseMap[];
+layout(std430, binding = 0) buffer blockBuffer{
+	int blockIDs[];
 };
 
 
 uniform int width;
 uniform int height;
 uniform int depth;
+
+bool IsSolid(int x, int y, int z)
+{
+	int index = x + y * (width) + z * (width) * (height);
+    return blockIDs[index] >= 0;
+}
 
 void main(){
 	
@@ -19,11 +25,16 @@ void main(){
 	uint zPos = gl_GlobalInvocationID.z;
 
 	if(xPos >= uint(width) || yPos >= uint(height) || zPos >= uint(depth)) return;
-
-	uint index = xPos + yPos * uint(width) + zPos * uint(width) * uint(height);
 	
-	float noiseValue = noiseMap[index];
-	//noiseValue = (noiseValue + 1.0f) * 0.5f; // Normalize to [0, 1]
+	int x = int(xPos);
+	int y = int(yPos);
+	int z = int(zPos);
 
-	noiseMap[index] = noiseValue;
+	
+
+	if(!IsSolid(x,y,z)) return;
+
+	if(!IsSolid(x,y + 1, z)) return;
+	int index = x + y * (width) + z * (width) * (height);
+	blockIDs[index] = 3;
 }

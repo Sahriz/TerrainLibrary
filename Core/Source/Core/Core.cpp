@@ -595,8 +595,8 @@ namespace Core {
 	GLuint _marchingCubesTriCreatorComputeShader = 0;
 	GLuint _voxelCubesGeometryInitComputeShader = 0;
 	GLuint _voxelCubesTriangleCounterComputeShader = 0;
-	GLuint _normalisedNoiseMapComputeShader = 0;
-	GLuint _splineNoiseEvaluationComputeShader = 0;
+	GLuint _voxelTerrainPainterComputeShader = 0;
+
 	void Init() {
 		_vertexInitComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexInit.comp");
 		_indexInitComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapIndexInit.comp");
@@ -608,8 +608,8 @@ namespace Core {
 		_marchingCubesTriCreatorComputeShader = CreateComputeShaderProgram("../Core/Source/Core/MarchingCubesCreateTris.comp");
 		_voxelCubesGeometryInitComputeShader = CreateComputeShaderProgram("../Core/Source/Core/VoxelCubesGeometryInit.comp");
 		_voxelCubesTriangleCounterComputeShader = CreateComputeShaderProgram("../Core/Source/Core/VoxelCubesCountTriangles.comp");
-		_normalisedNoiseMapComputeShader = CreateComputeShaderProgram("../Core/Source/Core/NormaliseNoiseValues.comp");
-		_splineNoiseEvaluationComputeShader = CreateComputeShaderProgram("../Core/Source/Core/SplineNoiseEvaluation.comp");
+		_voxelTerrainPainterComputeShader = CreateComputeShaderProgram("../Core/Source/Core/VoxelTerrainPainter.comp");
+
 	}
 	void Cleanup() {
 		glDeleteProgram(_vertexInitComputeShaderProgram);
@@ -622,8 +622,8 @@ namespace Core {
 		glDeleteProgram(_marchingCubesTriCreatorComputeShader);
 		glDeleteProgram(_voxelCubesGeometryInitComputeShader);
 		glDeleteProgram(_voxelCubesTriangleCounterComputeShader);
-		glDeleteProgram(_normalisedNoiseMapComputeShader);
-		glDeleteProgram(_splineNoiseEvaluationComputeShader);
+		glDeleteProgram(_voxelTerrainPainterComputeShader);
+
 	}
 
 	std::vector<float> CreateFlat2DNoiseMap(const int width, const int height, const int depth, const glm::vec2 offset, bool CleanUp) {
@@ -753,14 +753,14 @@ namespace Core {
 
 		glDeleteBuffers(1, &ssboNoise);
 	}
-	void CreateFlat3DNoiseMapPipeLine(NoiseMapData& noiseMapData, const Spline& spline, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency, const bool useDropoff) {
+	void CreateFlat3DNoiseMapPipeLine(BlockIds& blockIDs, const Spline& spline, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency, const bool useDropoff) {
 		int sizeOfNoiseMap = width * height * depth;
-		noiseMapData.noiseMap.resize(sizeOfNoiseMap);
+		blockIDs.IDs.resize(sizeOfNoiseMap);
 
 		GLuint ssboNoise;
 		glGenBuffers(1, &ssboNoise);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMapData.noiseMap.size() * sizeof(float), noiseMapData.noiseMap.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, blockIDs.IDs.size() * sizeof(int), blockIDs.IDs.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
 
 		GLuint ssboSplinePoints;
@@ -795,10 +795,10 @@ namespace Core {
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		float* ptr = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+		int* ptr = (int*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
 		// Copy or use data
 		if (ptr) {
-			noiseMapData.noiseMap.assign(ptr, ptr + noiseMapData.noiseMap.size());
+			blockIDs.IDs.assign(ptr, ptr + blockIDs.IDs.size());
 			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 		}
 		else {
@@ -808,26 +808,24 @@ namespace Core {
 		glDeleteBuffers(1, &ssboNoise);
 		glDeleteBuffers(1, &ssboSplinePoints);
 	}
-	void NormaliseNoiseMap(NoiseMapData& noiseMapData, int width, int height, int depth, bool CleanUp) {
-		GLuint ssboNoise;
-		glGenBuffers(1, &ssboNoise);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMapData.noiseMap.size() * sizeof(float), noiseMapData.noiseMap.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
+	void TerrainPaint(BlockIds& blockIDs, int width, int height, int depth) {
 
-		GLint widthLoc = glGetUniformLocation(_normalisedNoiseMapComputeShader, "width");
-		GLint heightLoc = glGetUniformLocation(_normalisedNoiseMapComputeShader, "height");
-		GLint depthLoc = glGetUniformLocation(_normalisedNoiseMapComputeShader, "depth");
-		GLint maxLoc = glGetUniformLocation(_normalisedNoiseMapComputeShader, "maxValue");
-		GLint minLoc = glGetUniformLocation(_normalisedNoiseMapComputeShader, "minValue");
+		GLuint ssboIDs;
+		glGenBuffers(1, &ssboIDs);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIDs);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, blockIDs.IDs.size() * sizeof(int), blockIDs.IDs.data(), GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboIDs);
 
-		glUseProgram(_normalisedNoiseMapComputeShader);
+
+		GLint widthLoc = glGetUniformLocation(_voxelTerrainPainterComputeShader, "width");
+		GLint heightLoc = glGetUniformLocation(_voxelTerrainPainterComputeShader, "height");
+		GLint depthLoc = glGetUniformLocation(_voxelTerrainPainterComputeShader, "depth");
+
+		glUseProgram(_voxelTerrainPainterComputeShader);
 
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
 		glUniform1i(depthLoc, depth);
-		glUniform1f(maxLoc, noiseMapData.maxValue);
-		glUniform1f(minLoc, noiseMapData.minValue);
 
 		glDispatchCompute(
 			(GLuint)ceil(width / 8.0f),
@@ -836,64 +834,18 @@ namespace Core {
 		);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		float* ptr = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIDs);
+		int* ptr = (int*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
 		// Copy or use data
 		if (ptr) {
-			noiseMapData.noiseMap.assign(ptr, ptr + noiseMapData.noiseMap.size());
+			blockIDs.IDs.assign(ptr, ptr + blockIDs.IDs.size());
 			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-			glDeleteBuffers(1, &ssboNoise);
 		}
 		else {
 			std::cout << "Something went wrong in CreateVertices";
 		}
-		
-	}
-	void SampleSplineCurve(NoiseMapData& noiseMapData, int width, int height, int depth,const Spline& spline) {
-		GLuint ssboNoise;
-		GLuint ssboSplinePoints;
 
-		glGenBuffers(1, &ssboNoise);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMapData.noiseMap.size() * sizeof(float), noiseMapData.noiseMap.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
-
-		glGenBuffers(1, &ssboSplinePoints);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboSplinePoints);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, spline.points.size() * sizeof(glm::vec2), spline.points.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboSplinePoints);
-
-		GLint widthLoc = glGetUniformLocation(_splineNoiseEvaluationComputeShader, "width");
-		GLint heightLoc = glGetUniformLocation(_splineNoiseEvaluationComputeShader, "height");
-		GLint depthLoc = glGetUniformLocation(_splineNoiseEvaluationComputeShader, "depth");
-		GLint splinePointsLoc = glGetUniformLocation(_splineNoiseEvaluationComputeShader, "splinePointsCount");
-		glUseProgram(_splineNoiseEvaluationComputeShader);
-
-		glUniform1i(widthLoc, width);
-		glUniform1i(heightLoc, height);
-		glUniform1i(depthLoc, depth);
-		glUniform1i(splinePointsLoc, (int)spline.points.size());
-
-		glDispatchCompute(
-			(GLuint)ceil(width / 8.0f),
-			(GLuint)ceil(height / 8.0f),
-			(GLuint)ceil(depth / 8.0f)
-		);
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		float* ptr = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		// Copy or use data
-		if (ptr) {
-			noiseMapData.noiseMap.assign(ptr, ptr + noiseMapData.noiseMap.size());
-			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-			glDeleteBuffers(1, &ssboNoise);
-			glDeleteBuffers(1, &ssboSplinePoints);
-
-		}
-		else {
-			std::cout << "Something went wrong in CreateVertices";
-		}
+		glDeleteBuffers(1, &ssboIDs);
 	}
 
 	void CreateVertices(PlaneMesh& planeData, int width, int height, glm::ivec2 offset, bool CleanUp) {
@@ -1403,13 +1355,13 @@ namespace Core {
 		return p1 + mu * (p2 - p1);
 	}
 
-	int VoxelCubesQuadCount(int width, int heigth, int depth, glm::vec3 offset,const std::vector<float>& noiseMap, bool CleanUp) {
+	int VoxelCubesQuadCount(int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp) {
 		GLuint ssboCounter;
 		GLuint ssboNoise;
 
 		glGenBuffers(1, &ssboNoise);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMap.size() * sizeof(float), noiseMap.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, blockIDs.IDs.size() * sizeof(int), blockIDs.IDs.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
 
 		int initial = 0;
@@ -1448,7 +1400,7 @@ namespace Core {
 		return vertexCount;
 	}
 
-	void VoxelCubesGeometryInit(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const std::vector<float>& noiseMap, int quadCount, bool CleanUp) {
+	void VoxelCubesGeometryInit(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, int quadCount, bool CleanUp) {
 		std::vector<glm::vec3> vertices;
 		std::vector<glm::vec3> normals;
 		std::vector<int> indices;
@@ -1469,7 +1421,7 @@ namespace Core {
 
 		glGenBuffers(1, &ssboNoise);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMap.size() * sizeof(float), noiseMap.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, blockIDs.IDs.size() * sizeof(int), blockIDs.IDs.data(), GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
 
 		glGenBuffers(1, &ssboVertex);
@@ -1561,6 +1513,8 @@ namespace Core {
 		int paddedDepth = depth + 2;
 
 		NoiseMapData noiseMapData;
+		BlockIds blockIDs;
+		BlockIds;
 
 		glm::vec3 offset3D = glm::vec3(offset.x, 0, offset.y);
 
@@ -1583,20 +1537,13 @@ namespace Core {
 		spline.points.push_back(SplinePoint(0.98f, 1.55f));
 		spline.points.push_back(SplinePoint(1.0f, 0.2f));
 
-		CreateFlat3DNoiseMapPipeLine(noiseMapData, spline, paddedWidth, paddedHeight, paddedDepth, offset3D, true, frequency, true);
-		//NormaliseNoiseMap(noiseMapData, paddedWidth, paddedHeight, paddedDepth, true);
-		//SampleSplineCurve(noiseMapData, paddedWidth, paddedHeight, paddedDepth, spline);
-		//if(noiseMapData.minValue < -0.866f || noiseMapData.maxValue > 0.866f)
-			//std::cout << "MinValue: " << noiseMapData.minValue << " | MaxValue: " << noiseMapData.maxValue << "\n";
-		
-		int quadCount = VoxelCubesQuadCount(paddedWidth, paddedHeight, paddedDepth, offset3D, noiseMapData.noiseMap, CleanUp);
-		VoxelCubesGeometryInit(planeData, paddedWidth, paddedHeight, paddedDepth, offset3D, noiseMapData.noiseMap, quadCount, CleanUp);
+		CreateFlat3DNoiseMapPipeLine(blockIDs, spline, paddedWidth, paddedHeight, paddedDepth, offset3D, true, frequency, true);
+		TerrainPaint(blockIDs, paddedWidth, paddedHeight, paddedDepth);
 
-		if (offset == glm::vec2(0.0)) {
-			for (int i = 0; i < 30; i++) {
-				std::cout << planeData.UVs[i].x << "  " << planeData.UVs[i].y << "\n";
-			}
-		}
+
+		int quadCount = VoxelCubesQuadCount(paddedWidth, paddedHeight, paddedDepth, offset3D, blockIDs, CleanUp);
+		VoxelCubesGeometryInit(planeData, paddedWidth, paddedHeight, paddedDepth, offset3D, blockIDs, quadCount, CleanUp);
+
 		return planeData;
 	}
 }
