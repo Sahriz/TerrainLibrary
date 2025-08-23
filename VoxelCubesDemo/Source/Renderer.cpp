@@ -86,6 +86,7 @@ Renderer::Renderer() {
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_MULTISAMPLE);
 
 	{
 		
@@ -278,7 +279,7 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	int display_w, display_h;
 	glfwGetFramebufferSize(_window, &display_w, &display_h);
 	glViewport(0, 0, display_w, display_h);
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClearColor(130.f/255.f, 200.f/255.f, 229.f/255.f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	DrawChunks(chunkManager);

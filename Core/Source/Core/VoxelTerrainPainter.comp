@@ -35,6 +35,11 @@ void main(){
 	if(!IsSolid(x,y,z)) return;
 
 	if(!IsSolid(x,y + 1, z)) return;
+
 	int index = x + y * (width) + z * (width) * (height);
+	for(int i = 1; i < 5; i++){
+		if(!IsSolid(x,y+i,z)){blockIDs[index] = 2; return;}
+	}
+	
 	blockIDs[index] = 3;
 }

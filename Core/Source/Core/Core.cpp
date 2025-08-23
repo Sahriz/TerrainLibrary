@@ -1532,9 +1532,9 @@ namespace Core {
 		spline.points.push_back(SplinePoint(0.64f,1.45f));
 		spline.points.push_back(SplinePoint(0.7f, 1.45f));
 		spline.points.push_back(SplinePoint(0.73f, 0.2f));
-		spline.points.push_back(SplinePoint(0.91f, 0.2f));
+		spline.points.push_back(SplinePoint(0.95f, 0.2f));
 		spline.points.push_back(SplinePoint(0.96f, 1.55f));
-		spline.points.push_back(SplinePoint(0.98f, 1.55f));
+		spline.points.push_back(SplinePoint(0.99f, 1.55f));
 		spline.points.push_back(SplinePoint(1.0f, 0.2f));
 
 		CreateFlat3DNoiseMapPipeLine(blockIDs, spline, paddedWidth, paddedHeight, paddedDepth, offset3D, true, frequency, true);
