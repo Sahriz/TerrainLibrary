@@ -146,13 +146,12 @@ void main(){
 	if(xPos >= uint(width) || yPos >= uint(height) || zPos >= uint(depth)) return;
 	
 
-	//vec3 position = vec3(float(xPos), float(yPos), float(zPos));
 	vec3 position = vec3((int(xPos) + offset.x)/float(width), (int(yPos) + offset.y)/float(height),(int(zPos) + offset.z)/float(depth));
 	vec3 uniformPosition = position;
-	uniformPosition.y *= float(width);
-	vec2 planePosition = position.xz;
+	uniformPosition.y *= float(width); // make y uniform with x and z so that the noise dont stretch in y direction
+	vec2 planePosition = position.xz; // 2D plane position for height map generation
 	float heightMap = snoise(planePosition * frequency * 0.1);
-	heightMap = (heightMap + 0.9) / (2.0 * 0.9);
+	heightMap = (heightMap + 0.9) / (2.0 * 0.9); // normalize to around 0-1 range
 	
 	float splineSample = sampleCurve(heightMap);
 	
@@ -160,7 +159,7 @@ void main(){
 	
 	
 	float t = float(yPos) / float(height);
-	float heightValue = 1/t * heightMap;
+	float heightValue = 1.0/t * heightMap;
 	float terrainValue = snoise(position * frequency) ;
 	terrainValue = (terrainValue + 0.9) / (2.0 * 0.9) * (splineSample);
 	if(useHeightDropoff){
@@ -168,9 +167,12 @@ void main(){
 		terrainValue += falloffBase;
 	}
 
-	float cheeseCavesNoise = snoise((uniformPosition + vec3(-723.0, 409.0, 122.0))*frequency*0.1);
-	float q = 1.0 - t;
-	float cheeseCaves = cheeseCavesNoise * pow(q,1.0);
+	float cheeseCavesNoise = snoise((uniformPosition + vec3(-723.0, 409.0, 122.0))*frequency*3.5);
+	float q = (1.0f - t);
+	q = clamp(q, 0.0, 1.0);
+	float cheeseCaveNoiseNormalized = (cheeseCavesNoise + 0.9) / (2.0 * 0.9);
+	float cheeseCaves = cheeseCaveNoiseNormalized * pow(q,2.0);
+	float cheeseCaves2 = snoise((uniformPosition + vec3(423.0, -109.0, -522.0))*frequency*1.5) * pow(q,2);
 	
 	vec3 seed1 = vec3(100.0, 200.0, 300.0);
 	vec3 seed2 = vec3(-300.0, 500.0, 700.0);
@@ -182,11 +184,11 @@ void main(){
 	float caveStringValue2 = snoise((uniformPosition + seed2) * frequency * 1.7) * pow(q,0.5);
 	float caveStringValue3 = snoise((uniformPosition + seed3) * frequency * 1.7) * pow(q,0.5);
 
-	float threshHold = 0.05;
+	float threshHold = 0.03;
 
-	float combinedCaveString = (abs(caveStringValue1) < threshHold && abs(caveStringValue2) < threshHold)
+	float combinedCaveString = (((abs(caveStringValue1) < threshHold && abs(caveStringValue2) < threshHold)
 								|| (abs(caveStringValue1) < threshHold && abs(caveStringValue3) < threshHold) 
-								|| (abs(caveStringValue2) < threshHold && abs(caveStringValue3) < threshHold) ? -5.0 : 0.0;
+								|| (abs(caveStringValue2) < threshHold && abs(caveStringValue3) < threshHold))) ? -5.0 : 0.0;
 	uint index = xPos + yPos * uint(width) + zPos * uint(width) * uint(height);
-	noiseMap[index] = terrainValue + combinedCaveString > 0.5 ? 1 : -1;
+	noiseMap[index] = terrainValue + combinedCaveString  > 0.5 ? 1 : -1;
 }
