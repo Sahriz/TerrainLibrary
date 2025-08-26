@@ -21,7 +21,6 @@ Renderer::Renderer() {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	_window = glfwCreateWindow(_screenWidth, _screenHeight, "ChunkDemo", nullptr, nullptr);
-	_camera = Camera(_window);
 	if (!_window) {
 		glfwTerminate();
 		return;
@@ -34,7 +33,7 @@ Renderer::Renderer() {
 
 
 
-	glfwSetWindowUserPointer(_window, &_camera);
+	glfwSetWindowUserPointer(_window, &_player);
 	glfwSetCursorPosCallback(_window, mouse_callback);
 	glfwWindowHint(GLFW_DEPTH_BITS, 24);
 
@@ -240,14 +239,14 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	float deltaTime = timeValue - _prevTime;
 	_prevTime = timeValue;
 	float fps = 1 / deltaTime;
-	_camera.HandleKeyboardInput(deltaTime, _window);
-	_view = _camera.GetViewMatrix();
+	_player.HandleKeyboardInput(deltaTime, _window);
+	_view = _player.GetViewMatrix();
 	
 	glUniformMatrix4fv(_viewLoc, 1, GL_FALSE, glm::value_ptr(_view));
 	//std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
 	//std::cout << "FPS: " << fps << std::endl << std::flush;
 	glUniform1f(_timeLocation, timeValue);
-	glm::vec3 camPos = _camera.GetPosition();
+	glm::vec3 camPos = _player.GetCameraPosition();
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();

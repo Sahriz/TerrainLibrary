@@ -20,7 +20,9 @@ void ChunkManager::GenerateChunk(const glm::vec3& position) {
 					//the function call is GPU for the gpu implementtion. Please do keep in mind the noise map is still using compute shaders
 					//even on the cpu implementation, so that is technically a speedup that should not be granted as a possitive for the CPU part
 					//of this code. 
-					_chunkMap[coord] = std::move(Core::CreateVoxelCubes3DMesh(_width, _height, _depth, offset, false, _amplitude, _frequency, _persistance, _lacunarity, _octave, true)); 
+					Core::VoxelData voxelData = std::move(Core::CreateVoxelCubes3DMesh(_width, _height, _depth, offset, false, _amplitude, _frequency, _persistance, _lacunarity, _octave, true));
+					_chunkMap[coord] = voxelData.meshData;
+					_blockIDs[coord] = voxelData.blockIDs;
 				}
 			}
 	}

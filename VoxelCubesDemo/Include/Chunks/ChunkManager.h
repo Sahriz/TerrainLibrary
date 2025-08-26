@@ -55,9 +55,13 @@ public:
 	std::unordered_map<ChunkCoord, Core::PlaneMesh>& GetChunkMap() {
 		return _chunkMap;
 	}
+	std::unordered_map<ChunkCoord, Core::BlockIds>& GetBlockIDs() {
+		return _blockIDs;
+	}
 
 private:
 	std::unordered_map<ChunkCoord, Core::PlaneMesh> _chunkMap;
+	std::unordered_map<ChunkCoord, Core::BlockIds> _blockIDs;
 
 	float _scale = 0.1f;
 	float _amplitude = 1.0f;

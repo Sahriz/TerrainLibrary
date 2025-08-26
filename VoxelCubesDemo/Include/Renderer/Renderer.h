@@ -21,7 +21,7 @@
 #include <iomanip>
 
 #include "ChunkManager.h"
-#include "Camera.h"
+#include "Player.h"
 #include "ChunkRenderer.h"
 #include "Core/Core.h"
 
@@ -44,8 +44,10 @@ public:
     }
 
     const glm::vec3& GetCameraPosition() {
-        return _camera.GetPosition();
+        return _player.GetCameraPosition();
     }
+
+    void PlayerInit(Player player) { _player = player; }
     
 private:
     int _width = 16;
@@ -72,7 +74,7 @@ private:
     int _screenHeight = 1080;
     glm::mat4 _perspectiveMat;
     
-    Camera _camera;
+    Player _player;
     GLuint _shaderProgram;
     GLFWwindow* _window;
 

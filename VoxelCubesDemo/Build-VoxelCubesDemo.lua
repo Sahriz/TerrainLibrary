@@ -6,13 +6,11 @@ project "VoxelCubesDemo"
    staticruntime "off"
    systemversion "latest"
 
-   files { "Source/**.h", "Source/**.cpp", "Include/**.h", "Shaders/shader.frag", "Shaders/shader.vert", "**.h", "**.h"}
+   files { "Source/**.h", "Source/**.cpp", "Include/**.h", "Shaders/shader.frag", "Shaders/shader.vert", "**.h", "**.cpp"}
 
    includedirs
    {
-      "Source",
-      "Include",
-      "Shaders",
+      "**",
        "../Vendor/glm",
        "../Vendor/glm/gtc",
        "../Vendor/stb",

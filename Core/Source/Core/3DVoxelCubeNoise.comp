@@ -171,7 +171,7 @@ void main(){
 	float q = (1.0f - t);
 	q = clamp(q, 0.0, 1.0);
 	float cheeseCaveNoiseNormalized = (cheeseCavesNoise + 0.9) / (2.0 * 0.9);
-	float cheeseCaves = cheeseCaveNoiseNormalized * pow(q,2.0);
+	float cheeseCaves = cheeseCaveNoiseNormalized + pow(t,0.5);
 	float cheeseCaves2 = snoise((uniformPosition + vec3(423.0, -109.0, -522.0))*frequency*1.5) * pow(q,2);
 	
 	vec3 seed1 = vec3(100.0, 200.0, 300.0);
@@ -180,15 +180,16 @@ void main(){
 	
 	
 
-	float caveStringValue1 = snoise((uniformPosition + seed1)* frequency * 1.7) * pow(q,0.5);
-	float caveStringValue2 = snoise((uniformPosition + seed2) * frequency * 1.7) * pow(q,0.5);
-	float caveStringValue3 = snoise((uniformPosition + seed3) * frequency * 1.7) * pow(q,0.5);
+	float caveStringValue1 = snoise((uniformPosition + seed1)* frequency * 1.4) * pow(q,0.5);
+	float caveStringValue2 = snoise((uniformPosition + seed2) * frequency * 1.4) * pow(q,0.5);
+	float caveStringValue3 = snoise((uniformPosition + seed3) * frequency * 1.4) * pow(q,0.5);
 
-	float threshHold = 0.03;
+	float threshHold = 0.09;
 
 	float combinedCaveString = (((abs(caveStringValue1) < threshHold && abs(caveStringValue2) < threshHold)
 								|| (abs(caveStringValue1) < threshHold && abs(caveStringValue3) < threshHold) 
-								|| (abs(caveStringValue2) < threshHold && abs(caveStringValue3) < threshHold))) ? -5.0 : 0.0;
+								)) ? -5.0 : 0.0;
+	float combinedCheeseCave = (cheeseCaves < 0.5f) ? -5.0f: 0.0f;
 	uint index = xPos + yPos * uint(width) + zPos * uint(width) * uint(height);
-	noiseMap[index] = terrainValue + combinedCaveString  > 0.5 ? 1 : -1;
+	noiseMap[index] = terrainValue + combinedCaveString + combinedCheeseCave > 0.5 ? 1 : -1;
 }

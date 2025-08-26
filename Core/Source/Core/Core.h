@@ -56,6 +56,12 @@ namespace Core {
 	struct BlockIds {
 		std::vector<int> IDs;
 	};
+	struct VoxelData {
+		VoxelData(PlaneMesh meshdata, BlockIds blockids) { meshData = meshdata; blockIDs = blockids; }
+		PlaneMesh meshData;
+		BlockIds blockIDs;
+	};
+	
 	extern GLuint _vertexInitComputeShaderProgram;
 	extern GLuint _indexInitComputeShaderProgram;
 	extern GLuint _vertexDisplacementComputeShaderProgram;
@@ -94,5 +100,5 @@ namespace Core {
 
 	int VoxelCubesQuadCount(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp);
 	void VoxelCubesGeometryInit(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp);
-	PlaneMesh CreateVoxelCubes3DMesh(int width, int heigth, int depth, glm::vec2 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = true);
+	VoxelData CreateVoxelCubes3DMesh(int width, int heigth, int depth, glm::vec2 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = true);
 }

@@ -2,7 +2,9 @@
 
 #include "Renderer.h"
 #include "ChunkManager.h"
+#include "Player.h"
 #include <thread>
+#include <mutex>
 #include <atomic>
 
 class App {
@@ -16,6 +18,8 @@ public:
 private:
     Renderer _renderer;
     ChunkManager _chunkManager;
+    Player _player;
+    Physics _physics;
 
     std::atomic<bool> _running = true; // This is your shared control flag
 };

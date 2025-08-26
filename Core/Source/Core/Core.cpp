@@ -1506,7 +1506,7 @@ namespace Core {
 		glDeleteBuffers(1, &ssboVertexCounter);
 	}
 
-	PlaneMesh CreateVoxelCubes3DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff) {
+	VoxelData CreateVoxelCubes3DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff) {
 		PlaneMesh planeData;
 		int paddedWidth = width + 2;
 		int paddedHeight = height + 2;
@@ -1551,6 +1551,6 @@ namespace Core {
 		int quadCount = VoxelCubesQuadCount(paddedWidth, paddedHeight, paddedDepth, offset3D, blockIDs, CleanUp);
 		VoxelCubesGeometryInit(planeData, paddedWidth, paddedHeight, paddedDepth, offset3D, blockIDs, quadCount, CleanUp);
 
-		return planeData;
+		return VoxelData(planeData,blockIDs);
 	}
 }
