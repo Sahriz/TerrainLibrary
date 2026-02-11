@@ -187,7 +187,7 @@ void App::Cleanup(GLuint& VAO, GLuint& VBOVertex, GLuint& VBONormals, GLuint& EB
 }
 
 void App::Run() {
-	int width = 1280, height = 720;
+	int width = 1920, height = 1080;
 	// Vertex data
 	//createPerspectiveMatrix(glm::radians(80.0f), width/height, 0.1f, 1000.0f, 0.5f, -0.5f, 0.5f, -0.5f);
 	_perspectiveMat = glm::perspective(glm::radians(80.0f), static_cast<float>(width) / static_cast<float>(height), 0.1f, 1000.0f);

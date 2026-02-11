@@ -64,8 +64,8 @@ private:
     int _height = 250;
     int _viewDistance = 4;
 
-    int _screenWidth = 1280;
-    int _screenHeight = 720;
+    int _screenWidth = 1920;
+    int _screenHeight = 1080;
     glm::mat4 _perspectiveMat;
     
     Camera _camera;
