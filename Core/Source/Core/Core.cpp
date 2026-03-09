@@ -5,6 +5,12 @@ namespace Core {
 	//while others are just utility functions that are used within the library.
 	//If for any reason there would be a need to expose these functions, they can be moved to the Core namespace and made public. Just remember to declare them in the
 	//header file Core.h.
+
+	void TestHIPIntegration() {
+		std::cout << "Testing HIP integration from Core..." << std::endl;
+		testHIP();
+		std::cout << "HIP integration test finished!" << std::endl;
+	}
 	namespace {
 		std::string readFile(const std::string& filePath) {
 			std::ifstream file(filePath);
@@ -1518,7 +1524,7 @@ namespace Core {
 
 		glm::vec3 offset3D = glm::vec3(offset.x, 0, offset.y);
 
-		/*Spline spline;
+		Spline spline;
 		spline.points.push_back(SplinePoint(0.0f,0.3f));
 		spline.points.push_back(SplinePoint(0.1f, 0.3f));
 		spline.points.push_back(SplinePoint(0.27f, 0.45f));
@@ -1536,14 +1542,14 @@ namespace Core {
 		spline.points.push_back(SplinePoint(0.96f, 1.55f));
 		spline.points.push_back(SplinePoint(0.99f, 1.55f));
 		spline.points.push_back(SplinePoint(1.0f, 0.2f));
-		*/
-		Spline spline;
+		
+		/*Spline spline;
 		spline.points.push_back(SplinePoint(0.0f, 0.3f));
 		spline.points.push_back(SplinePoint(0.1f, 0.3f));
 		spline.points.push_back(SplinePoint(0.96f, 0.45f));
 		spline.points.push_back(SplinePoint(0.98f, 1.4f));
 		spline.points.push_back(SplinePoint(1.0f, 1.45f));
-
+		*/
 		CreateFlat3DNoiseMapPipeLine(blockIDs, spline, paddedWidth, paddedHeight, paddedDepth, offset3D, true, frequency, true);
 		TerrainPaint(blockIDs, paddedWidth, paddedHeight, paddedDepth);
 

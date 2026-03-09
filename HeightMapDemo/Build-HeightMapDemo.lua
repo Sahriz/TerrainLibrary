@@ -23,18 +23,22 @@ project "HeightMapDemo"
       "../Vendor/imgui",
       "../Vendor/imgui/backends",
       "../Vendor/glfw/backends",
+     "C:/Program Files/AMD/ROCm/7.1/include"
    }
 
    links
    {
       "Core",
+      "VoxelAccelerator",
       "GLFW",
       "Glad",
       "ImGui",
-      "opengl32.lib"
+      "opengl32.lib",
+        "amdhip64"
 
    }
 
+   libdirs { "C:/Program Files/AMD/ROCm/7.1/lib" }
    targetdir ("../Binaries/" .. OutputDir .. "/%{prj.name}")
    objdir ("../Binaries/Intermediates/" .. OutputDir .. "/%{prj.name}")
 

@@ -12,6 +12,7 @@ workspace "TerrainLibrary"
 
 group "Core"
 	include "Core/Build-Core.lua"
+   include "Core/Build-VoxelAccelerator.lua"
 group ""
 
 include "HeightMapDemo/Build-HeightMapDemo.lua"

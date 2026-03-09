@@ -10,9 +10,7 @@ std::atomic<bool> running(true);
 
 void App::Run() {
 	Core::Init();
-	auto previous = Clock::now();
-	double lag = 0.0;
-
+	Core::TestHIPIntegration();
 	_physics = Physics(_chunkManager);
 	_player = Player(_renderer.GetWindow(), _physics);
 	_renderer.PlayerInit(_player);

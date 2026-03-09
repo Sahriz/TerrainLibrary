@@ -2,7 +2,6 @@ project "Core"
    kind "StaticLib"
    language "C++"
    cppdialect "C++20"
-   targetdir "Binaries/%{cfg.buildcfg}"
    staticruntime "off"
 
    files { "Source/**.h", "Source/**.cpp" , "Source/**.comp"}
@@ -15,8 +14,13 @@ project "Core"
       "../Vendor/glfw/include",
       "../Vendor/glfw/backends",
       "../Vendor/Glad/include",
+      "C:/Program Files/AMD/ROCm/7.1/include"
 
    }
+    
+    links { "VoxelAccelerator" }
+    libdirs { "C:/Program Files/AMD/ROCm/7.1/lib" }
+    links { "amdhip64" }
 
    targetdir ("../Binaries/" .. OutputDir .. "/%{prj.name}")
    objdir ("../Binaries/Intermediates/" .. OutputDir .. "/%{prj.name}")
