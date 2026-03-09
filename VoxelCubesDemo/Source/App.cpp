@@ -1,13 +1,5 @@
 ﻿#include "App.h"
 
-using Clock = std::chrono::high_resolution_clock;
-using Time = std::chrono::duration<double>;
-
-const double TICK_RATE = 1.0 / 60.0; // 60 ticks per second
-
-std::mutex playerMutex;
-std::atomic<bool> running(true);
-
 void App::Run() {
 	Core::Init();
 	auto previous = Clock::now();
@@ -23,7 +15,7 @@ void App::Run() {
 		auto previous = Clock::now();
 		double lag = 0.0;
 
-		while (running) {
+		while (_running) {
 			auto current = Clock::now();
 			Time elapsed = current - previous;
 			previous = current;
@@ -31,7 +23,7 @@ void App::Run() {
 
 			while (lag >= TICK_RATE) {
 				{
-					std::lock_guard<std::mutex> lock(playerMutex);
+					std::lock_guard<std::mutex> lock(_playerMutex);
 					_player.UpdatePlayer(lag); // safe update
 				}
 				lag -= TICK_RATE;
@@ -51,7 +43,7 @@ void App::Run() {
 	}
 
 	// Cleanup
-	running = false;
+	_running = false;
 	tickThread.join();
 	Core::Cleanup();
 	_renderer.Cleanup(_chunkManager);

@@ -97,12 +97,7 @@ void main(){
 
 	//vec3 position = vec3(float(xPos), float(yPos), float(zPos));
 	vec3 position = vec3((int(xPos) + offset.x)/float(width), (int(yPos) + offset.y)/float(height),(int(zPos) + offset.z)/float(depth));
-	vec3 uniformPosition = position;
-	uniformPosition.y *= float(width);
 	float terrainValue = snoise(position * frequency);
-	
-	//terrainValue = (terrainValue + 0.9) / (2.0 * 0.9);
-	
 	
 	if(useHeightDropoff){
 	float t = float(yPos) / float(height);

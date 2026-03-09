@@ -675,6 +675,7 @@ namespace Core {
 
 		glUseProgram(_3dNoiseMapComputeShader);
 
+
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
 		glUniform1i(depthLoc, depth);
@@ -1044,7 +1045,7 @@ namespace Core {
 		return planeData;
 	}	
 
-	int CountMarchingCubesTriangleCount(int width, int height, int depth, glm::vec3 offset, bool CleanUp,std::vector<float>& noiseMap, float iso) {
+	int CountMarchingCubesTriangleCount(int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso) {
 		GLuint ssboCounter;
 		int initial = 0;
 		glGenBuffers(1, &ssboCounter);
@@ -1052,18 +1053,13 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, 1 * sizeof(int), &initial, GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboCounter);
 
-		GLuint ssboNoise;
-		glGenBuffers(1, &ssboNoise);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMap.size() * sizeof(float), noiseMap.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboNoise);
-
 		GLuint ssboFlatTriTable;
 		glGenBuffers(1, &ssboFlatTriTable);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboFlatTriTable);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, 256*16 * sizeof(int), FlatTriTable, GL_STATIC_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboFlatTriTable);
 
+		GLint frequencyLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "frequency");
 		GLint widthLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "width");
 		GLint heightLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "height");
 		GLint depthLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "depth");
@@ -1072,6 +1068,7 @@ namespace Core {
 
 		glUseProgram(_marchingCubesTriCounterComputeShader);
 
+		glUniform1f(frequencyLoc, 0.1f);
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
 		glUniform1i(depthLoc, depth);
@@ -1095,51 +1092,41 @@ namespace Core {
 			std::cout << "Something went wrong in CreateVertices";
 		}
 		glDeleteBuffers(1, &ssboCounter);
-		glDeleteBuffers(1, &ssboNoise);
 		return vertexCount;
 	}
-	PlaneMesh CreateMarchingCubesTriangles(int width, int height, int depth, glm::vec3 offset, bool CleanUp, std::vector<float>& noiseMap, float iso, int triangleCount) {
-		PlaneMesh planeData;
-		int vectorSize = triangleCount;
-		std::vector<glm::fvec3> vertices;
-		vertices.resize(vectorSize);
+	VoxelMesh CreateMarchingCubesTriangles(int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso) {
+		VoxelMesh planeData;
+		int maxCount = (width - 1) * (height - 1) * (depth - 1) * 15; // Max 5 triangles per cube, 3 vertices per triangle
+		std::vector<glm::vec3> vertices;
 		std::vector<int> indices;
-		indices.resize(vectorSize);
-		std::vector<glm::fvec3> normals;
-		normals.resize(vectorSize);
+		std::vector<glm::vec3> normals;
 
-		GLuint ssboNoise;
 		GLuint ssboVertices;
 		GLuint ssboNormals;
 		GLuint ssboIndices;
 		GLuint ssboCounter;
 		GLuint ssboFlatTriTable;
-		
 
-		glGenBuffers(1, &ssboNoise);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMap.size() * sizeof(float), noiseMap.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
 
 		glGenBuffers(1, &ssboVertices);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, vertices.size() * 3 * sizeof(float), vertices.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, maxCount * sizeof(float) * 3, NULL, GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboVertices);
 
 		glGenBuffers(1, &ssboNormals);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormals);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, normals.size() * 3 * sizeof(float),normals.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, maxCount * sizeof(float) * 3, NULL, GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboNormals);
 
 		glGenBuffers(1, &ssboIndices);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndices);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, indices.size() * sizeof(int), indices.data(), GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, maxCount * sizeof(int), NULL, GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboIndices);
 
-		int initial = 0;
+		uint32_t initial = 0;
 		glGenBuffers(1, &ssboCounter);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, 1 * sizeof(int), &initial, GL_DYNAMIC_COPY);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, 1 * sizeof(uint32_t), &initial, GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssboCounter);
 
 		glGenBuffers(1, &ssboFlatTriTable);
@@ -1147,6 +1134,8 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, 256 * 16 * sizeof(int), FlatTriTable, GL_STATIC_DRAW);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, ssboFlatTriTable);
 
+		
+		GLint frequencyLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "frequency");
 		GLint widthLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "width");
 		GLint heightLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "height");
 		GLint depthLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "depth");
@@ -1155,6 +1144,7 @@ namespace Core {
 
 		glUseProgram(_marchingCubesTriCreatorComputeShader);
 
+		glUniform1f(frequencyLoc, 0.1f);
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
 		glUniform1i(depthLoc, depth);
@@ -1165,34 +1155,43 @@ namespace Core {
 			(GLuint)ceil(height / 8.0f), (GLuint)ceil(depth / 8.0f));
 
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+		glFinish();
 
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
-		glm::fvec3* ptrVerts = (glm::fvec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+		// STEP A: Read the counter back to know how much work the GPU actually did
+		uint32_t actualVertexCount = 0;
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
+		glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &actualVertexCount);
 
-		if(ptrVerts) {
-			planeData.vertices.assign(ptrVerts, ptrVerts + vertices.size());
+		if (actualVertexCount > 0) {
+			// Resize output vectors to the EXACT size
+			planeData.vertices.resize(actualVertexCount);
+			planeData.normals.resize(actualVertexCount);
+			planeData.indices.resize(actualVertexCount);
+
+			// STEP B: Map and copy only the ACTIVE dat Vertices
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertices);
+			void* ptrV = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+			memcpy(planeData.vertices.data(), ptrV, actualVertexCount * sizeof(glm::vec3));
+			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+			// Normals
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormals);
+			void* ptrN = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+			memcpy(planeData.normals.data(), ptrN, actualVertexCount * sizeof(glm::vec3));
+			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+			// Indices
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndices);
+			void* ptrI = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+			memcpy(planeData.indices.data(), ptrI, actualVertexCount * sizeof(int));
+			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 		}
-
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormals);
-		glm::fvec3* ptrNormals = (glm::fvec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-
-		if(ptrNormals) {
-			planeData.normals.assign(ptrNormals, ptrNormals + normals.size());
-		}
-
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndices);
-		int* ptrIndices = (int*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-
-		if (ptrIndices) {
-			planeData.indices.assign(ptrIndices, ptrIndices + indices.size());
-		}
-
-		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		glDeleteBuffers(1, &ssboNoise);
+		
 		glDeleteBuffers(1, &ssboVertices);
 		glDeleteBuffers(1, &ssboNormals);
 		glDeleteBuffers(1, &ssboIndices);
 		glDeleteBuffers(1, &ssboCounter);
+		glDeleteBuffers(1, &ssboFlatTriTable); // Don't forget this one!
 
 		return planeData;
 	}
@@ -1329,15 +1328,14 @@ namespace Core {
 		return planeData;
 	}
 
-	PlaneMesh CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves) {
+	VoxelMesh CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves) {
 		
 		int paddedHeight = height + 1;
 		int paddedWidth = width + 1;
 		int paddedDepth = depth + 1;
 
-		std::vector<float> noiseMap = CreateFlat3DNoiseMap(paddedHeight, paddedWidth, paddedDepth, offset, true, amplitude, frequency, persistance, lacunarity, octaves);
-		int triCount = CountMarchingCubesTriangleCount(paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, noiseMap, 0.0f);
-		PlaneMesh planeData = CreateMarchingCubesTriangles(paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, noiseMap, 0.0f, triCount);
+		
+		VoxelMesh planeData = CreateMarchingCubesTriangles(paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f);
 
 		return planeData;
 	}

@@ -29,7 +29,7 @@ private:
 	int _depth;
 	int _viewDistance;
 
-	void SetupChunkRenderData(Core::PlaneMesh& mesh);
+	void SetupChunkRenderData(Core::VoxelMesh& mesh);
 
-	void CleanupChunkRenderData(Core::PlaneMesh& mesh);
+	void CleanupChunkRenderData(Core::VoxelMesh& mesh);
 };

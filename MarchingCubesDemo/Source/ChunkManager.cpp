@@ -35,9 +35,9 @@ void ChunkManager::DestroyChunks() {
 	_chunkMap.clear();
 }
 
-void ChunkManager::DeleteChunk(Core::PlaneMesh& mesh) {
-	std::vector<glm::fvec3>().swap(mesh.vertices);
-	std::vector<glm::fvec3>().swap(mesh.normals);
+void ChunkManager::DeleteChunk(Core::VoxelMesh& mesh) {
+	std::vector<glm::vec3>().swap(mesh.vertices);
+	std::vector<glm::vec3>().swap(mesh.normals);
 	std::vector<int>().swap(mesh.indices);
 
 	// Free GPU memory

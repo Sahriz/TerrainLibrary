@@ -35,7 +35,7 @@ void ChunkRenderer::UpdateActiveChunk(const glm::vec3& position, ChunkManager& c
 	
 }
 
-void ChunkRenderer::SetupChunkRenderData(Core::PlaneMesh& mesh) {
+void ChunkRenderer::SetupChunkRenderData(Core::VoxelMesh& mesh) {
 	
 	glGenVertexArrays(1, &mesh.vao);
 	glBindVertexArray(mesh.vao);
@@ -61,7 +61,7 @@ void ChunkRenderer::SetupChunkRenderData(Core::PlaneMesh& mesh) {
 	mesh.gpuLoaded = true;
 }
 
-void ChunkRenderer::CleanupChunkRenderData(Core::PlaneMesh& mesh) {
+void ChunkRenderer::CleanupChunkRenderData(Core::VoxelMesh& mesh) {
 	// Delete the EBO, VBOs, and VAO
 	glDeleteBuffers(1, &mesh.ebo);
 	glDeleteBuffers(1, &mesh.vboNormals);

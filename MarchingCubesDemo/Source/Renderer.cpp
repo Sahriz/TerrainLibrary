@@ -162,10 +162,10 @@ GLuint Renderer::CreateShaderProgram(const std::string& vertexPath, const std::s
 }
 
 void Renderer::DrawChunks(ChunkManager& chunkManager) {
-	std::unordered_map<ChunkCoord, Core::PlaneMesh>& chunkMap = chunkManager.GetChunkMap();
+	std::unordered_map<ChunkCoord, Core::VoxelMesh>& chunkMap = chunkManager.GetChunkMap();
 	_chunkRenderer.UpdateActiveChunk(GetCameraPosition(), chunkManager);
 	for (const glm::ivec3& coord : _chunkRenderer.GetActiveChunkSet()) {
-		Core::PlaneMesh& planeData = chunkMap[coord];
+		Core::VoxelMesh& planeData = chunkMap[coord];
 		glUseProgram(_shaderProgram);
 		glBindVertexArray(planeData.vao);
 		glDrawElements(GL_TRIANGLES, planeData.indices.size(), GL_UNSIGNED_INT, 0);
