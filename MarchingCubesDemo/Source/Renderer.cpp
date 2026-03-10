@@ -38,12 +38,6 @@ Renderer::Renderer() {
 
 	_shaderProgram = CreateShaderProgram("Shaders/shader.vert", "Shaders/shader.frag");
 
-	// Load OpenGL with glad
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-		// handle error
-		std::cerr << "Failed to initialize GLAD\n";
-		return;
-	}
 
 	// Setup ImGui
 	IMGUI_CHECKVERSION();
@@ -162,15 +156,27 @@ GLuint Renderer::CreateShaderProgram(const std::string& vertexPath, const std::s
 }
 
 void Renderer::DrawChunks(ChunkManager& chunkManager) {
-	std::unordered_map<ChunkCoord, Core::VoxelMesh>& chunkMap = chunkManager.GetChunkMap();
+	auto& chunkMap = chunkManager.GetChunkMap();
+	
 	_chunkRenderer.UpdateActiveChunk(GetCameraPosition(), chunkManager);
+
 	for (const glm::ivec3& coord : _chunkRenderer.GetActiveChunkSet()) {
-		Core::VoxelMesh& planeData = chunkMap[coord];
-		glUseProgram(_shaderProgram);
-		glBindVertexArray(planeData.vao);
-		glDrawElements(GL_TRIANGLES, planeData.indices.size(), GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0);
+		std::cout << "Drawing chunk at: " << coord.x << ", " << coord.y << ", " << coord.z << std::endl;
+		Core::VoxelMesh& mesh = chunkMap[coord];
+		if (!mesh.gpuLoaded) continue;
+
+		// If your vertices are NOT in world space yet, update model matrix:
+		// glm::mat4 chunkModel = glm::translate(glm::mat4(1.0f), glm::vec3(coord * 32));
+		// glUniformMatrix4fv(_modelMLocation, 1, GL_FALSE, glm::value_ptr(chunkModel));
+
+		glBindVertexArray(mesh.vao);
+
+		// Mandatory for Indirect: Bind the buffer to the INDIRECT_BUFFER target
+		glBindBuffer(GL_DRAW_INDIRECT_BUFFER, mesh.indirectBuffer);
+
+		glDrawArraysIndirect(GL_TRIANGLES, (void*)0);
 	}
+	glBindVertexArray(0);
 }
 
 void Renderer::ResetToStartValues() {
@@ -187,7 +193,11 @@ void Renderer::ResetToStartValues() {
 
 void Renderer::Render(ChunkManager& chunkManager) {
 	glfwPollEvents();
+	// 1. CLEAR
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glUseProgram(_shaderProgram);
 	float timeValue = glfwGetTime();
 	float deltaTime = timeValue - _prevTime;
 	_prevTime = timeValue;
@@ -198,6 +208,9 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	//std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
 	//std::cout << "FPS: " << fps << std::endl << std::flush;
 	glUniform1f(_timeLocation, timeValue);
+
+
+	DrawChunks(chunkManager);
 
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -231,11 +244,7 @@ void Renderer::Render(ChunkManager& chunkManager) {
 
 	int display_w, display_h;
 	glfwGetFramebufferSize(_window, &display_w, &display_h);
-	glViewport(0, 0, display_w, display_h);
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	DrawChunks(chunkManager);
 
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

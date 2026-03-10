@@ -12,8 +12,11 @@ layout(std430, binding = 3) buffer IndexBuffer{
 	int indices[];
 };
 
-layout(std430, binding = 4) buffer CounterBuffer {
-    uint counter; 
+layout(std430, binding = 4) buffer IndirectBuffer {
+    uint count;         // Number of vertices to draw
+    uint instanceCount; // Usually 1
+    uint first;         // Always 0
+    uint baseInstance;  // Always 0
 };
 layout(std430, binding = 5) buffer TriangleTableBuffer{
     int triTable[];
@@ -164,7 +167,7 @@ float snoise(vec3 v){
 }
 
 void main(){
-    vec3 Pos = gl_GlobalInvocationID.xyz;
+    vec3 Pos = gl_GlobalInvocationID;
 
 	 if (Pos.x >= uint(width-1) || Pos.y >= uint(height-1) || Pos.z >= uint(depth-1))
         return;
@@ -223,11 +226,15 @@ void main(){
         numTris++;
     }
     
-    if (numTris <= 0) return;
+    if (numTris == 0) return;
     
     // RESERVE SPACE: One atomic call for all vertices in this voxel
     // We change the buffer to uint and use uint here.
-    uint vIdx = atomicAdd(counter, uint(numTris * 9));
+    // In the Shader: Reserve 3 vertices per triangle
+    uint vStart = atomicAdd(count, uint(numTris * 3)); 
+
+    // Then calculate your float offset internally
+    uint fIdx = vStart * 3;
 
     for(int q = 0; triTable[triIndexBase + q] != -1; q += 3)
     {
@@ -239,40 +246,41 @@ void main(){
 
         //Vert 1
         // Store vertices directly as vec3
-        vertices[vIdx]     = v0.x;
-        vertices[vIdx + 1] = v0.y;
-        vertices[vIdx + 2] = v0.z;
+        vertices[fIdx]     = v0.x;
+        vertices[fIdx + 1] = v0.y;
+        vertices[fIdx + 2] = v0.z;
 
         // Store normals (one normal per vertex)
-        normals[vIdx]     = normal.x;
-        normals[vIdx + 1] = normal.y;
-        normals[vIdx + 2] = normal.z;
+        normals[fIdx]     = normal.x;
+        normals[fIdx + 1] = normal.y;
+        normals[fIdx + 2] = normal.z;
 
         //Vert 2
-        vertices[vIdx + 3] = v1.x;
-        vertices[vIdx + 4] = v1.y;
-        vertices[vIdx + 5] = v1.z;
+        vertices[fIdx + 3] = v1.x;
+        vertices[fIdx + 4] = v1.y;
+        vertices[fIdx + 5] = v1.z;
 
-        normals[vIdx+ 3]  = normal.x;
-        normals[vIdx + 4] = normal.y;
-        normals[vIdx + 5] = normal.z;
+        normals[fIdx+ 3]  = normal.x;
+        normals[fIdx + 4] = normal.y;
+        normals[fIdx + 5] = normal.z;
 
         //Vert 3
-        vertices[vIdx + 6] = v2.x;
-        vertices[vIdx + 7] = v2.y;
-        vertices[vIdx + 8] = v2.z; 
-        normals[vIdx + 6] = normal.x, 0.0;
-        normals[vIdx + 7] = normal.y, 0.0;
-        normals[vIdx + 8] = normal.z, 0.0;
-
-
-        uint indexId = vIdx / 3;
+        vertices[fIdx + 6] = v2.x;
+        vertices[fIdx + 7] = v2.y;
+        vertices[fIdx + 8] = v2.z;
+        
+        normals[fIdx + 6] = normal.x;
+        normals[fIdx + 7] = normal.y;
+        normals[fIdx + 8] = normal.z;
 
         // Store indices
-        indices[indexId]     = int(indexId);
-        indices[indexId + 1] = int(indexId + 1);
-        indices[indexId + 2] = int(indexId + 2);
+        indices[vStart]     = int(vStart);
+        indices[vStart + 1] = int(vStart + 1);
+        indices[vStart + 2] = int(vStart + 2);
 
-        vIdx += 9; // Advance the local offset for the next triangle in this voxel
+        vStart += 3; // Move to the next triangle's vertices in the buffer
+        fIdx += 9;   // Move to the next triangle's vertices in the buffer (3 vertices * 3 components each)
+
+        
     }
 }

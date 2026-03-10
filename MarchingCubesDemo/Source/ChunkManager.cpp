@@ -15,7 +15,7 @@ void ChunkManager::GenerateChunk(const glm::vec3& position) {
 				glm::vec3 coord = playerChunk + glm::vec3(x, y, z);
 				//std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";
 				// Generate if not yet stored
-				if (_chunkMap.find(coord) == _chunkMap.end() || _chunkMap[coord].vertices.empty()) {
+				if (_chunkMap.find(coord) == _chunkMap.end()) {
 					glm::vec3 offset = coord * glm::vec3(_width, _height, _depth);
 					//Try generating the mesh with and without GPU to see the difference in speed! The function call is the same but the end of
 					//the function call is GPU for the gpu implementtion. Please do keep in mind the noise map is still using compute shaders
@@ -36,17 +36,16 @@ void ChunkManager::DestroyChunks() {
 }
 
 void ChunkManager::DeleteChunk(Core::VoxelMesh& mesh) {
-	std::vector<glm::vec3>().swap(mesh.vertices);
-	std::vector<glm::vec3>().swap(mesh.normals);
-	std::vector<int>().swap(mesh.indices);
 
 	// Free GPU memory
 	if (mesh.vboVertices) glDeleteBuffers(1, &mesh.vboVertices);
 	if (mesh.vboNormals) glDeleteBuffers(1, &mesh.vboNormals);
-	if (mesh.ebo) glDeleteBuffers(1, &mesh.ebo);
 	if (mesh.vao) glDeleteVertexArrays(1, &mesh.vao);
+	if (mesh.indirectBuffer) glDeleteBuffers(1, &mesh.indirectBuffer);
+	if (mesh.ssboIndices) glDeleteBuffers(1, &mesh.ssboIndices);
+	
 
-	mesh.ebo = 0;
+
 	mesh.vboNormals = 0;
 	mesh.vboVertices = 0;
 	mesh.vao = 0;

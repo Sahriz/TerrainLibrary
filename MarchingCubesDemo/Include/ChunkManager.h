@@ -74,7 +74,7 @@ private:
 	int _width = 32;
 	int _height = 32;
 	int _depth = 32;
-	int _viewDistance = 3;
+	int _viewDistance = 1;
 
 	void DeleteChunk(Core::VoxelMesh& mesh);
 

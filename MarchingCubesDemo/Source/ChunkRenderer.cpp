@@ -40,21 +40,13 @@ void ChunkRenderer::SetupChunkRenderData(Core::VoxelMesh& mesh) {
 	glGenVertexArrays(1, &mesh.vao);
 	glBindVertexArray(mesh.vao);
 
-	glGenBuffers(1, &mesh.vboVertices);
 	glBindBuffer(GL_ARRAY_BUFFER, mesh.vboVertices);
-	glBufferData(GL_ARRAY_BUFFER, mesh.vertices.size() * sizeof(glm::fvec3), mesh.vertices.data(), GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr); // location 0
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0); // location 0
 	glEnableVertexAttribArray(0);
 
-	glGenBuffers(1, &mesh.vboNormals);
 	glBindBuffer(GL_ARRAY_BUFFER, mesh.vboNormals);
-	glBufferData(GL_ARRAY_BUFFER, mesh.normals.size() * sizeof(glm::fvec3), mesh.normals.data(), GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr); // location 1
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, (void*)0); // location 1
 	glEnableVertexAttribArray(1);
-
-	glGenBuffers(1, &mesh.ebo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(int), mesh.indices.data(), GL_STATIC_DRAW);
 
 	glBindVertexArray(0);
 
@@ -62,16 +54,22 @@ void ChunkRenderer::SetupChunkRenderData(Core::VoxelMesh& mesh) {
 }
 
 void ChunkRenderer::CleanupChunkRenderData(Core::VoxelMesh& mesh) {
-	// Delete the EBO, VBOs, and VAO
-	glDeleteBuffers(1, &mesh.ebo);
-	glDeleteBuffers(1, &mesh.vboNormals);
+	if (!mesh.gpuLoaded) return;
+
+	// Delete everything including the new Indirect Buffer
 	glDeleteBuffers(1, &mesh.vboVertices);
+	glDeleteBuffers(1, &mesh.vboNormals);
+	glDeleteBuffers(1, &mesh.indirectBuffer);
+
+	// If you kept ssboIndices for specific reasons:
+	if (mesh.ssboIndices) glDeleteBuffers(1, &mesh.ssboIndices);
+
 	glDeleteVertexArrays(1, &mesh.vao);
 
-	// Optional: Reset IDs to 0 (OpenGL default for "none")
-	mesh.ebo = 0;
-	mesh.vboNormals = 0;
+	// Reset handles
 	mesh.vboVertices = 0;
+	mesh.vboNormals = 0;
+	mesh.indirectBuffer = 0;
 	mesh.vao = 0;
 
 	mesh.gpuLoaded = false;
