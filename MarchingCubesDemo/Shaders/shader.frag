@@ -22,7 +22,7 @@ void main()
     
     //Distance-based visibility
     float dist = distance(FragPos, playerPos);
-    float maxDistance = 24.0;
+    float maxDistance = 48.0;
     float visibility = 1.0 - clamp(dist / maxDistance, 0.0, 1.0);
     visibility = pow(visibility, 1.0);
     

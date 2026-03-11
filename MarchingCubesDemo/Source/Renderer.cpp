@@ -214,7 +214,7 @@ void Renderer::Render(ChunkManager& chunkManager) {
 
 
 	DrawChunks(chunkManager);
-
+	/*
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
@@ -244,12 +244,12 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	ImGui::End();
 
 	ImGui::Render();
-
+	*/
 	int display_w, display_h;
 	glfwGetFramebufferSize(_window, &display_w, &display_h);
 
 
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	//ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	glfwSwapBuffers(_window);
 }

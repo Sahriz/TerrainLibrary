@@ -247,6 +247,7 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	//std::cout << "FPS: " << fps << std::endl << std::flush;
 	glUniform1f(_timeLocation, timeValue);
 	glm::vec3 camPos = _player.GetCameraPosition();
+	/*
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
@@ -274,7 +275,7 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	ImGui::End();
 
 	ImGui::Render();
-
+	*/
 	int display_w, display_h;
 	glfwGetFramebufferSize(_window, &display_w, &display_h);
 	glViewport(0, 0, display_w, display_h);
