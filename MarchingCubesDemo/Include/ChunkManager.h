@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <glm.hpp>
+#include <iostream>
 
 #include "Core/Core.h"
 
@@ -29,6 +30,10 @@ public:
 	void DestroyChunks();
 
 	void Update(const glm::vec3& position);
+
+	void QueueCPUContent(const glm::vec3& coord);
+
+	void GetCPUContent(const glm::vec3& position);
 
 	void GenerateChunk(const glm::vec3& position);
 
@@ -64,17 +69,17 @@ public:
 
 private:
 	std::unordered_map<ChunkCoord, Core::VoxelMesh> _chunkMap;
-
+	std::vector<glm::vec3> _chunkCoordsToGenerateToCPU;
 	float _scale = 0.1f;
 	float _amplitude = 1.0f;
-	float _frequency = 4.0f;
+	float _frequency = 0.04f;
 	int _octave = 5;
 	float _lacunarity = 2.0f;
 	float _persistance = 0.5f;
-	int _width = 32;
-	int _height = 32;
-	int _depth = 32;
-	int _viewDistance = 1;
+	int _width = 16;
+	int _height = 16;
+	int _depth = 16;
+	int _viewDistance = 5;
 
 	void DeleteChunk(Core::VoxelMesh& mesh);
 

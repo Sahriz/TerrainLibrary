@@ -1005,16 +1005,13 @@ namespace Core {
 		glDeleteBuffers(1, &ssboNoise);
 		return noiseMap;
 	}
-	void CreateFlat3DNoiseMap(NoiseMapData& noiseMapData, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff) {
+	void CreateFlat3DNoiseMap(VoxelMesh& mesh, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff) {
 		
 		int sizeOfNoiseMap = width * height * depth;
-		noiseMapData.noiseMap.resize(sizeOfNoiseMap);
 
-		GLuint ssboNoise;
-		glGenBuffers(1, &ssboNoise);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, noiseMapData.noiseMap.size() * sizeof(float), noiseMapData.noiseMap.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
+		glUseProgram(_3dNoiseMapComputeShader);
+
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.densitySSBO);
 
 		GLint widthLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "width");
 		GLint heightLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "height");
@@ -1022,8 +1019,6 @@ namespace Core {
 		GLint offsetLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "offset");
 		GLint frequencyLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "frequency");
 		GLint dropoffLoc = glGetUniformLocation(_3dNoiseMapComputeShader, "useHeightDropoff");
-
-		glUseProgram(_3dNoiseMapComputeShader);
 
 		glUniform1i(widthLoc, width);
 		glUniform1i(heightLoc, height);
@@ -1039,18 +1034,6 @@ namespace Core {
 		);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		float* ptr = (float*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		// Copy or use data
-		if (ptr) {
-			noiseMapData.noiseMap.assign(ptr, ptr + noiseMapData.noiseMap.size());
-			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		}
-		else {
-			std::cout << "Something went wrong in CreateVertices";
-		}
-
-		glDeleteBuffers(1, &ssboNoise);
 	}
 	void CreateFlat3DNoiseMapPipeLine(BlockIds& blockIDs, const Spline& spline, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency, const bool useDropoff) {
 		int sizeOfNoiseMap = width * height * depth;
@@ -1397,6 +1380,13 @@ namespace Core {
 		mesh.maxVertexCount = (width - 1) * (height - 1) * (depth - 1) * 15; // 15 is the max number of vertices per cube in marching cubes
 		std::vector<float> zeroData(mesh.maxVertexCount * 3, 0.0f);
 
+		int totalVoxels = width * height * depth;
+
+		glGenBuffers(1, &mesh.densitySSBO);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.densitySSBO);
+		// Allocate enough space for all the floats, uninitialized (nullptr) is fine since the GPU will fill it
+		glBufferData(GL_SHADER_STORAGE_BUFFER, totalVoxels * sizeof(float), nullptr, GL_STATIC_DRAW);
+
 		glGenBuffers(1, &mesh.vboVertices);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.vboVertices);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, mesh.maxVertexCount * sizeof(float) * 3, zeroData.data(), GL_STATIC_DRAW);
@@ -1406,8 +1396,6 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, mesh.maxVertexCount * sizeof(float) * 3, zeroData.data(), GL_STATIC_DRAW);
 
 
-		
-		
 		glGenBuffers(1, &mesh.indirectBuffer);
 		uint32_t drawCmd[] = { 0, 1, 0, 0 };
 		glBindBuffer(GL_DRAW_INDIRECT_BUFFER, mesh.indirectBuffer);
@@ -1424,7 +1412,93 @@ namespace Core {
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 		glEnableVertexAttribArray(1);
 
+		glGenBuffers(1, &mesh.stagingIndirect);
+		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingIndirect);
+		glBufferData(GL_COPY_READ_BUFFER, 16, nullptr, GL_STREAM_READ);
+
+		// 2. Allocate Staging Buffer for Vertices (Same size as the VBO)
+		glGenBuffers(1, &mesh.stagingVertices);
+		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingVertices);
+		glBufferData(GL_COPY_READ_BUFFER, mesh.maxVertexCount * sizeof(float) * 3, nullptr, GL_STREAM_READ);
+
+		// 3. Allocate Staging Buffer for Normals (Same size as the VBO)
+		glGenBuffers(1, &mesh.stagingNormals);
+		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingNormals);
+		glBufferData(GL_COPY_READ_BUFFER, mesh.maxVertexCount * sizeof(float) * 3, nullptr, GL_STREAM_READ);
+
 		mesh.gpuLoaded = true;
+	}
+
+	void StartAsyncReadback(VoxelMesh& mesh) {
+		// 1. Copy the Vertex Buffer
+		glBindBuffer(GL_COPY_READ_BUFFER, mesh.vboVertices);
+		glBindBuffer(GL_COPY_WRITE_BUFFER, mesh.stagingVertices);
+		glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, mesh.maxVertexCount * sizeof(float) * 3);
+
+		// 2. Copy the Normal Buffer
+		glBindBuffer(GL_COPY_READ_BUFFER, mesh.vboNormals);
+		glBindBuffer(GL_COPY_WRITE_BUFFER, mesh.stagingNormals);
+		glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, mesh.maxVertexCount * sizeof(float) * 3);
+
+		// 3. Copy the Indirect Buffer (Crucial: we need to know HOW MANY vertices were generated!)
+		glBindBuffer(GL_COPY_READ_BUFFER, mesh.indirectBuffer);
+		glBindBuffer(GL_COPY_WRITE_BUFFER, mesh.stagingIndirect);
+		glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, 16); // 16 bytes = 4 uints
+
+		// 4. Drop the sync fence!
+		mesh.syncObj = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+	}
+
+	bool PollAsyncReadback(VoxelMesh& mesh) {
+		// If there is no sync object, or the CPU mesh is already built, do nothing.
+		if (mesh.syncObj == nullptr || mesh.cpuMesh.isReady) return false;
+
+		// Ask the GPU: "Are you done?" (Timeout 0 means return instantly)
+		GLenum waitReturn = glClientWaitSync(mesh.syncObj, 0, 0);
+
+		if (waitReturn == GL_TIMEOUT_EXPIRED || waitReturn == GL_WAIT_FAILED) {
+			return false; // Still working, check again next frame
+		}
+
+		// --- THE DATA IS READY! Let's harvest it. ---
+
+		// 1. Read the exact vertex count from the Indirect Buffer
+		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingIndirect);
+		uint32_t* indirectData = (uint32_t*)glMapBufferRange(GL_COPY_READ_BUFFER, 0, 16, GL_MAP_READ_BIT);
+		uint32_t actualVertexCount = indirectData[0]; // The first integer is 'count'
+		glUnmapBuffer(GL_COPY_READ_BUFFER);
+
+		// If the chunk is completely empty (sky or deep underground), we can exit early
+		if (actualVertexCount == 0) {
+			mesh.cpuMesh.isReady = true;
+			glDeleteSync(mesh.syncObj);
+			mesh.syncObj = nullptr;
+			return true;
+		}
+
+		// 2. Resize our CPU vectors to perfectly fit the generated data
+		mesh.cpuMesh.vertices.resize(actualVertexCount);
+		mesh.cpuMesh.normals.resize(actualVertexCount);
+
+		// 3. Map and copy Vertices
+		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingVertices);
+		float* mappedVerts = (float*)glMapBufferRange(GL_COPY_READ_BUFFER, 0, actualVertexCount * sizeof(float) * 3, GL_MAP_READ_BIT);
+		// Copy the flat float array into our clean glm::vec3 vector
+		memcpy(mesh.cpuMesh.vertices.data(), mappedVerts, actualVertexCount * sizeof(glm::vec3));
+		glUnmapBuffer(GL_COPY_READ_BUFFER);
+
+		// 4. Map and copy Normals
+		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingNormals);
+		float* mappedNormals = (float*)glMapBufferRange(GL_COPY_READ_BUFFER, 0, actualVertexCount * sizeof(float) * 3, GL_MAP_READ_BIT);
+		memcpy(mesh.cpuMesh.normals.data(), mappedNormals, actualVertexCount * sizeof(glm::vec3));
+		glUnmapBuffer(GL_COPY_READ_BUFFER);
+
+		// 5. Clean up the sync object so we don't poll it again
+		glDeleteSync(mesh.syncObj);
+		mesh.syncObj = nullptr;
+		mesh.cpuMesh.isReady = true;
+
+		return true; // Success! The CPU now has the exact triangles.
 	}
 
 	void CreateMarchingCubesTriangles(VoxelMesh& mesh, int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso) {
@@ -1439,6 +1513,7 @@ namespace Core {
 		glUseProgram(_marchingCubesTriCreatorComputeShader);
 
 		// Bind this chunk's specific buffers
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.densitySSBO);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, mesh.vboVertices);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, mesh.vboNormals);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, mesh.indirectBuffer);
@@ -1472,16 +1547,18 @@ namespace Core {
 
 	VoxelMesh* CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves) {
 		
-		int paddedHeight = height + 1;
 		int paddedWidth = width + 1;
+		int paddedHeight = height + 1;
 		int paddedDepth = depth + 1;
 
 		VoxelMesh* mesh = new VoxelMesh;
 
 		InitializeVoxelMesh(*mesh, paddedWidth, paddedHeight, paddedDepth);
+
+		CreateFlat3DNoiseMap(*mesh, paddedWidth, paddedHeight, paddedDepth,offset,CleanUp,amplitude,frequency,persistance,lacunarity,octaves, false);
 		
 		CreateMarchingCubesTriangles(*mesh, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f);
-
+		StartAsyncReadback(*mesh);
 		return mesh;
 	}
 	glm::vec3 VertInterp(float iso, glm::vec3 p1, glm::vec3 p2, float v1, float v2)

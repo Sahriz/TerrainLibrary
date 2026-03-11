@@ -2,6 +2,10 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
+layout(std430, binding = 0) buffer DensityBuffer{
+    float densities[];
+};
+
 layout(std430, binding = 1) buffer VertexBuffer{
 	float vertices[];
 };
@@ -193,8 +197,10 @@ void main(){
     float cubeValues[8];
 	for (int i = 0; i < 8; i++)
     {
-        cubeCorners[i] = Pos + cornerOffsets[i] + offset; // optionally scale it
-        cubeValues[i] = snoise(cubeCorners[i] * frequency);
+        vec3 cornerPos = Pos + cornerOffsets[i];
+        uint cornerIndex = uint(cornerPos.x + (cornerPos.y * width) + (cornerPos.z * width * height));
+        cubeCorners[i] = cornerPos + offset; // optionally scale it
+        cubeValues[i] = densities[cornerIndex];
     }
 	// 2. Calculate cubeIndex
     int cubeIndex = 0;

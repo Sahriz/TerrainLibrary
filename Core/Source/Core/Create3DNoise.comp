@@ -3,7 +3,7 @@
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 layout(std430, binding = 0) buffer noiseBuffer{
-	float noiseMap[];
+	float densities[];
 };
 
 uniform int width;
@@ -88,22 +88,15 @@ float snoise(vec3 v){
 }
 
 void main(){
-	uint xPos = gl_GlobalInvocationID.x;
-	uint yPos = gl_GlobalInvocationID.y;
-	uint zPos = gl_GlobalInvocationID.z;
-	
-	if(xPos >= uint(width) || yPos >= uint(height) || zPos >= uint(depth)) return;
+	// 1. Keep Pos as unsigned integers!
+    uvec3 Pos = gl_GlobalInvocationID;
+    
+    if (Pos.x >= uint(width) || Pos.y >= uint(height) || Pos.z >= uint(depth)) return;
 
-
-	//vec3 position = vec3(float(xPos), float(yPos), float(zPos));
-	vec3 position = vec3((int(xPos) + offset.x)/float(width), (int(yPos) + offset.y)/float(height),(int(zPos) + offset.z)/float(depth));
-	float terrainValue = snoise(position * frequency);
+    // 2. Pure integer math for the index (no precision loss)
+    uint index = Pos.x + (Pos.y * uint(width)) + (Pos.z * uint(width) * uint(height));
 	
-	if(useHeightDropoff){
-	float t = float(yPos) / float(height);
-		float falloffBase = (1.0 / (1.0 + exp((t - 0.5) * 7.0))) * 2.0 - 1.0;
-		terrainValue += falloffBase;
-	}
-	uint index = xPos + yPos * uint(width) + zPos * uint(width) * uint(height);
-	noiseMap[index] = terrainValue;
+    // 3. Convert to float ONLY for the noise generation
+    vec3 worldPos = vec3(Pos) + offset;
+    densities[index] = snoise(worldPos * frequency);
 }

@@ -46,18 +46,35 @@ namespace Core {
 				if (vboNormals) glDeleteBuffers(1, &vboNormals);
 				if (vboVertices) glDeleteBuffers(1, &vboVertices);
 				if (vao) glDeleteVertexArrays(1, &vao);
+				
+				if (vboUVs) glDeleteBuffers(1, &vboUVs);
 			}
 		}
 	};
+
+	struct CpuVoxelMesh {
+		std::vector<glm::vec3> vertices;
+		std::vector<glm::vec3> normals;
+		bool isReady = false;
+	};
+
 	struct VoxelMesh
 	{
 		GLuint vao = 0;
+		GLuint densitySSBO = 0;
 		GLuint vboVertices = 0;
 		GLuint vboNormals = 0;
 		GLuint ssboIndices = 0;
 		GLuint indirectBuffer = 0;
 		int maxVertexCount = 0;
 		bool gpuLoaded = false;
+
+		GLuint stagingVertices = 0;
+		GLuint stagingNormals = 0;
+		GLuint stagingIndirect = 0;
+
+		GLsync syncObj = nullptr;
+		CpuVoxelMesh cpuMesh; //CPU-side copy of the mesh data for readback and other operations
 
 		~VoxelMesh()
 		{
@@ -67,6 +84,7 @@ namespace Core {
 				glDeleteBuffers(1, &indirectBuffer);
 				if (ssboIndices) glDeleteBuffers(1, &ssboIndices);
 				glDeleteVertexArrays(1, &vao);
+				if (densitySSBO) glDeleteBuffers(1, &densitySSBO);
 			}
 		}
 	};
@@ -101,7 +119,7 @@ namespace Core {
 	void PrintNumTrisTable();
 	std::vector<float> CreateFlat2DNoiseMap(const int width, const int height, const int depth, const glm::vec2 offset, bool CleanUp);
 	std::vector<float> CreateFlat3DNoiseMap(const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = false);
-	void CreateFlat3DNoiseMap(NoiseMapData& noiseMapData, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = false);
+	void CreateFlat3DNoiseMap(VoxelMesh& mesh, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff);
 	void CreateFlat3DNoiseMapPipeLine(BlockIds& blockIDs, const Spline& spline, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency = 1.0f, const bool useDropoff = false);
 	void TerrainPaint(BlockIds& blockIDs, int width, int height, int depth);
 
@@ -118,6 +136,8 @@ namespace Core {
 	PlaneMesh CreateVoxel2DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp);
 	PlaneMesh CreateMarchingCubes3DMesh(int width, int height, int depth, glm::vec3 offset, bool CleanUp);
 	VoxelMesh* CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5);
+	void StartAsyncReadback(VoxelMesh& mesh);
+	bool PollAsyncReadback(VoxelMesh& mesh);
 	
 
 	int VoxelCubesQuadCount(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp);
