@@ -81,6 +81,7 @@ private:
     GLint _modelMLocation;
     GLint _viewLoc;
     GLint _normalMatrixLocation;
+    GLint _playerPosition;
 
     void Init();
     std::string ReadFile(const std::string& filePath);

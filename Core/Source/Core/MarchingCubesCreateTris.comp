@@ -8,17 +8,14 @@ layout(std430, binding = 1) buffer VertexBuffer{
 layout(std430, binding = 2) buffer NormalBuffer{
 	float normals[];
 };
-layout(std430, binding = 3) buffer IndexBuffer{
-	int indices[];
-};
 
-layout(std430, binding = 4) buffer IndirectBuffer {
+layout(std430, binding = 3) buffer IndirectBuffer {
     uint count;         // Number of vertices to draw
     uint instanceCount; // Usually 1
     uint first;         // Always 0
     uint baseInstance;  // Always 0
 };
-layout(std430, binding = 5) buffer TriangleTableBuffer{
+layout(std430, binding = 4) buffer TriangleTableBuffer{
     int triTable[];
 };
 
@@ -29,7 +26,7 @@ uniform int depth;
 uniform vec3 offset;
 uniform float isoLevel;
 
-vec3 cornerOffsets[] = 
+const vec3 cornerOffsets[] = 
 		{
 			vec3(0, 0, 0),
 			vec3(1, 0, 0),
@@ -41,7 +38,7 @@ vec3 cornerOffsets[] =
 			vec3(0, 1, 1),
 		};
 
-int edgeTable[] =  {
+const int edgeTable[] =  {
 			0x0, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
 				0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
 				0x190, 0x99, 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c,
@@ -74,6 +71,26 @@ int edgeTable[] =  {
 				0x69c, 0x795, 0x49f, 0x596, 0x29a, 0x393, 0x99, 0x190,
 				0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
 				0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0   };
+
+const int numTrisTable[256] = {
+    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 2,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 3,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 3,
+    2, 3, 3, 2, 3, 4, 4, 3, 3, 4, 4, 3, 4, 5, 5, 2,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 3,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 4,
+    2, 3, 3, 4, 3, 4, 2, 3, 3, 4, 4, 5, 4, 5, 3, 2,
+    3, 4, 4, 3, 4, 5, 3, 2, 4, 5, 5, 4, 5, 2, 4, 1,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 3,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 2, 4, 3, 4, 3, 5, 2,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 4,
+    3, 4, 4, 3, 4, 5, 5, 4, 4, 3, 5, 2, 5, 4, 2, 1,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 2, 3, 3, 2,
+    3, 4, 4, 5, 4, 5, 5, 2, 4, 3, 5, 4, 3, 2, 4, 1,
+    3, 4, 4, 5, 4, 5, 3, 4, 4, 5, 5, 2, 3, 4, 2, 1,
+    2, 3, 3, 2, 3, 4, 2, 1, 3, 2, 4, 1, 2, 1, 1, 0,
+};
+
 
 
 vec3 VertInterp(float iso, vec3 p1, vec3 p2, float v1, float v2)
@@ -219,22 +236,14 @@ void main(){
 
     // 5. Emit triangles
     int triIndexBase = cubeIndex * 16;
-    int numTris = 0;
-    
-    // Count how many triangles this voxel actually has
-    for (int q = 0; triTable[triIndexBase + q] != -1; q += 3) {
-        numTris++;
-    }
-    
+
+    int numTris = numTrisTable[cubeIndex];
     if (numTris == 0) return;
     
     // RESERVE SPACE: One atomic call for all vertices in this voxel
     // We change the buffer to uint and use uint here.
     // In the Shader: Reserve 3 vertices per triangle
-    uint vStart = atomicAdd(count, uint(numTris * 3)); 
-
-    // Then calculate your float offset internally
-    uint fIdx = vStart * 3;
+    uint vStart = atomicAdd(count, uint(numTris * 9)); 
 
     for(int q = 0; triTable[triIndexBase + q] != -1; q += 3)
     {
@@ -246,40 +255,34 @@ void main(){
 
         //Vert 1
         // Store vertices directly as vec3
-        vertices[fIdx]     = v0.x;
-        vertices[fIdx + 1] = v0.y;
-        vertices[fIdx + 2] = v0.z;
+        vertices[vStart]     = v0.x;
+        vertices[vStart + 1] = v0.y;
+        vertices[vStart + 2] = v0.z;
 
         // Store normals (one normal per vertex)
-        normals[fIdx]     = normal.x;
-        normals[fIdx + 1] = normal.y;
-        normals[fIdx + 2] = normal.z;
+        normals[vStart]     = normal.x;
+        normals[vStart + 1] = normal.y;
+        normals[vStart + 2] = normal.z;
 
         //Vert 2
-        vertices[fIdx + 3] = v1.x;
-        vertices[fIdx + 4] = v1.y;
-        vertices[fIdx + 5] = v1.z;
+        vertices[vStart + 3] = v1.x;
+        vertices[vStart + 4] = v1.y;
+        vertices[vStart + 5] = v1.z;
 
-        normals[fIdx+ 3]  = normal.x;
-        normals[fIdx + 4] = normal.y;
-        normals[fIdx + 5] = normal.z;
+        normals[vStart+ 3]  = normal.x;
+        normals[vStart + 4] = normal.y;
+        normals[vStart + 5] = normal.z;
 
         //Vert 3
-        vertices[fIdx + 6] = v2.x;
-        vertices[fIdx + 7] = v2.y;
-        vertices[fIdx + 8] = v2.z;
+        vertices[vStart + 6] = v2.x;
+        vertices[vStart + 7] = v2.y;
+        vertices[vStart + 8] = v2.z;
         
-        normals[fIdx + 6] = normal.x;
-        normals[fIdx + 7] = normal.y;
-        normals[fIdx + 8] = normal.z;
+        normals[vStart + 6] = normal.x;
+        normals[vStart + 7] = normal.y;
+        normals[vStart + 8] = normal.z;
 
-        // Store indices
-        indices[vStart]     = int(vStart);
-        indices[vStart + 1] = int(vStart + 1);
-        indices[vStart + 2] = int(vStart + 2);
-
-        vStart += 3; // Move to the next triangle's vertices in the buffer
-        fIdx += 9;   // Move to the next triangle's vertices in the buffer (3 vertices * 3 components each)
+        vStart += 9;   // Move to the next triangle's vertices in the buffer (3 vertices * 3 components each)
 
         
     }

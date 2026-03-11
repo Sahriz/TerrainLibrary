@@ -6,24 +6,27 @@ in vec3 Normal;
 uniform float Width;
 uniform float Height;
 uniform float Time;
+uniform vec3 playerPos;
 
 out vec4 FragColor;
 
 void main()
 {
-    float ambientStrength = 0.01f;
-    vec3 ambientColor = vec3(1.0f, 1.0f, 1.0f); // White color
-    vec3 ambient = ambientStrength * ambientColor;
-
-    float diffuseStrength = 0.8f;
+    //Directional lighting
+    vec3 baseColor = vec3(0.7, 0.35, 0.35);
     vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(vec3(0.0f, -1, 0.0f)); // Light coming from above
-    float diff = max(dot(norm, -lightDir), 0.0f);
-    vec3 diffuse = diff * ambientColor * diffuseStrength;
+    vec3 lightDir = normalize(playerPos - FragPos);
+    float diff = max(dot(norm, lightDir), 0.0);
+    float ambient = 0.15;
+    vec3 litColor = baseColor * (diff + ambient);
+    
+    //Distance-based visibility
+    float dist = distance(FragPos, playerPos);
+    float maxDistance = 24.0;
+    float visibility = 1.0 - clamp(dist / maxDistance, 0.0, 1.0);
+    visibility = pow(visibility, 1.0);
+    
+    vec3 finalColor = litColor * visibility;
 
-    vec3 result = ambient + diffuse;
-    //FragColor = vec4(result, 1.0f);
-
-
-    FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    FragColor = vec4(finalColor, 1.0);
 }

@@ -57,6 +57,7 @@ Renderer::Renderer() {
 	_widthLocation = glGetUniformLocation(_shaderProgram, "Width");
 	_heightLocation = glGetUniformLocation(_shaderProgram, "Height");
 	_timeLocation = glGetUniformLocation(_shaderProgram, "Time");
+	_playerPosition = glGetUniformLocation(_shaderProgram, "playerPos");
 	_projMLocation = glGetUniformLocation(_shaderProgram, "projM");
 	_modelMLocation = glGetUniformLocation(_shaderProgram, "uModel");
 	_viewLoc = glGetUniformLocation(_shaderProgram, "uView");
@@ -161,7 +162,7 @@ void Renderer::DrawChunks(ChunkManager& chunkManager) {
 	_chunkRenderer.UpdateActiveChunk(GetCameraPosition(), chunkManager);
 
 	for (const glm::ivec3& coord : _chunkRenderer.GetActiveChunkSet()) {
-		std::cout << "Drawing chunk at: " << coord.x << ", " << coord.y << ", " << coord.z << std::endl;
+		//std::cout << "Drawing chunk at: " << coord.x << ", " << coord.y << ", " << coord.z << std::endl;
 		Core::VoxelMesh& mesh = chunkMap[coord];
 		if (!mesh.gpuLoaded) continue;
 
@@ -204,10 +205,12 @@ void Renderer::Render(ChunkManager& chunkManager) {
 	float fps = 1 / deltaTime;
 	_camera.HandleKeyboardInput(deltaTime, _window);
 	_view = _camera.GetViewMatrix();
+	glm::vec3 camPos = _camera.GetPosition();
 	glUniformMatrix4fv(_viewLoc, 1, GL_FALSE, glm::value_ptr(_view));
 	//std::cout << "\rDelta Time: " << deltaTime << "s" << " | FPS: " << fps << std::flush;
 	//std::cout << "FPS: " << fps << std::endl << std::flush;
 	glUniform1f(_timeLocation, timeValue);
+	glUniform3f(_playerPosition, camPos.x, camPos.y, camPos.z);
 
 
 	DrawChunks(chunkManager);

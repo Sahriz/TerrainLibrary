@@ -586,6 +586,34 @@ namespace Core {
 		-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };	
 	}
 
+	void PrintNumTrisTable() {
+		std::cout << "const int numTrisTable[256] = {\n    ";
+
+		for (int i = 0; i < 256; i++) {
+			int numTris = 0;
+
+			// Each case has 16 integers. A triangle uses 3 integers.
+			// We step by 3 to check the first vertex index of each potential triangle.
+			for (int q = 0; q < 15; q += 3) {
+				// flatTable[i * 16 + q] grabs the start of the next triangle for case i
+				if (FlatTriTable[i * 16 + q] != -1) {
+					numTris++;
+				}
+				else {
+					break; // Hit the -1 terminator, no more triangles for this voxel
+				}
+			}
+
+			std::cout << numTris << ", ";
+
+			// Formatting: Print a newline every 16 numbers so it looks clean
+			if ((i + 1) % 16 == 0 && i != 255) {
+				std::cout << "\n    ";
+			}
+		}
+		std::cout << "\n};\n";
+	}
+
 	inline GLuint GetTriTableSSBO() {
 		static GLuint handle = 0; // This exists exactly once in the binary
 		if (handle == 0) {
@@ -1413,8 +1441,8 @@ namespace Core {
 		// Bind this chunk's specific buffers
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, mesh.vboVertices);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, mesh.vboNormals);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, mesh.indirectBuffer);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, GetTriTableSSBO());
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, mesh.indirectBuffer);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, GetTriTableSSBO());
 		
 		GLint frequencyLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "frequency");
 		GLint widthLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "width");
@@ -1433,159 +1461,26 @@ namespace Core {
 		glDispatchCompute((GLuint)ceil(width / 8.0f),
 			(GLuint)ceil(height / 8.0f), (GLuint)ceil(depth / 8.0f));
 
-		uint32_t debugCount = 0;
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.indirectBuffer);
-		glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &debugCount);
-		std::cout << "Chunk at offset " << offset.x << " " << offset.y << " " << offset.z << " " << " has " << debugCount << " vertices." << std::endl;
+		glMemoryBarrier(GL_COMMAND_BARRIER_BIT |
+			GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT |
+			GL_SHADER_STORAGE_BARRIER_BIT);
 
 		glMemoryBarrier(GL_COMMAND_BARRIER_BIT |
 			GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT |
 			GL_SHADER_STORAGE_BARRIER_BIT);
 	}
-	PlaneMesh CreateMarchingCubes3DMesh(int width, int height, int depth, glm::vec3 offset, bool CleanUp) {
-		PlaneMesh planeData;
-		int paddedHeight = height + 1;
-		int paddedWidth = width + 1;
-		int paddedDepth = depth + 1;
 
-		std::vector<float> noiseMap = CreateFlat3DNoiseMap(paddedHeight, paddedWidth, paddedDepth, offset, true);
-
-		/*for (const auto& temp : noiseMap) {
-			if(temp < 0.0f)
-				std::cout << temp << "\n";
-		}*/
-
-		std::vector<glm::fvec3> vertices;
-		std::vector<int> indices;
-		std::vector<glm::fvec3> normals;
-
-
-		glm::ivec3 cornerOffsets[] =
-		{
-			glm::ivec3(0, 0, 0),
-			glm::ivec3(1, 0, 0),
-			glm::ivec3(1, 0, 1),
-			glm::ivec3(0, 0, 1),
-			glm::ivec3(0, 1, 0),
-			glm::ivec3(1, 1, 0),
-			glm::ivec3(1, 1, 1),
-			glm::ivec3(0, 1, 1),
-		};
-		float isoLevel = 0.1f; // threshold
-
-
-		float scale = 5.0f;
-		for (int x = 0; x < width; x++)
-		{
-			for (int y = 0; y < height; y++)
-			{
-				for (int z = 0; z < depth; z++)
-				{
-					// 1. Get cube corners
-					glm::vec3 cubeCorners[8];
-					float cubeValues[8];
-
-					for (int i = 0; i < 8; i++)
-					{
-						glm::vec3 corner = glm::vec3(x, y, z) + glm::vec3(cornerOffsets[i]);
-						int ix = (int)corner.x;
-						int iy = (int)corner.y;
-						int iz = (int)corner.z;
-
-						int idx = ix + iy * paddedWidth + iz * paddedWidth * paddedHeight;
-						cubeCorners[i] = (corner + offset); // optionally scale it
-
-						cubeValues[i] = noiseMap[idx];
-
-
-					}
-
-					// 2. Calculate cubeIndex
-					int cubeIndex = 0;
-					for (int i = 0; i < 8; i++)
-					{
-						if (cubeValues[i] < isoLevel)
-							cubeIndex |= (1 << i);
-					}
-
-					// 3. If no intersection, skip
-					if (edgeTable[cubeIndex] == 0)
-						continue;
-
-					// 4. Compute interpolated vertex positions
-					glm::vec3 vertList[12];
-					if ((edgeTable[cubeIndex] & 1) != 0)
-						vertList[0] = VertInterp(isoLevel, cubeCorners[0], cubeCorners[1], cubeValues[0], cubeValues[1]);
-					if ((edgeTable[cubeIndex] & 2) != 0)
-						vertList[1] = VertInterp(isoLevel, cubeCorners[1], cubeCorners[2], cubeValues[1], cubeValues[2]);
-					if ((edgeTable[cubeIndex] & 4) != 0)
-						vertList[2] = VertInterp(isoLevel, cubeCorners[2], cubeCorners[3], cubeValues[2], cubeValues[3]);
-					if ((edgeTable[cubeIndex] & 8) != 0)
-						vertList[3] = VertInterp(isoLevel, cubeCorners[3], cubeCorners[0], cubeValues[3], cubeValues[0]);
-					if ((edgeTable[cubeIndex] & 16) != 0)
-						vertList[4] = VertInterp(isoLevel, cubeCorners[4], cubeCorners[5], cubeValues[4], cubeValues[5]);
-					if ((edgeTable[cubeIndex] & 32) != 0)
-						vertList[5] = VertInterp(isoLevel, cubeCorners[5], cubeCorners[6], cubeValues[5], cubeValues[6]);
-					if ((edgeTable[cubeIndex] & 64) != 0)
-						vertList[6] = VertInterp(isoLevel, cubeCorners[6], cubeCorners[7], cubeValues[6], cubeValues[7]);
-					if ((edgeTable[cubeIndex] & 128) != 0)
-						vertList[7] = VertInterp(isoLevel, cubeCorners[7], cubeCorners[4], cubeValues[7], cubeValues[4]);
-					if ((edgeTable[cubeIndex] & 256) != 0)
-						vertList[8] = VertInterp(isoLevel, cubeCorners[0], cubeCorners[4], cubeValues[0], cubeValues[4]);
-					if ((edgeTable[cubeIndex] & 512) != 0)
-						vertList[9] = VertInterp(isoLevel, cubeCorners[1], cubeCorners[5], cubeValues[1], cubeValues[5]);
-					if ((edgeTable[cubeIndex] & 1024) != 0)
-						vertList[10] = VertInterp(isoLevel, cubeCorners[2], cubeCorners[6], cubeValues[2], cubeValues[6]);
-					if ((edgeTable[cubeIndex] & 2048) != 0)
-						vertList[11] = VertInterp(isoLevel, cubeCorners[3], cubeCorners[7], cubeValues[3], cubeValues[7]);
-
-					// 5. Emit triangles
-					int triIndexBase = cubeIndex * 16;
-
-					for (int i = 0; FlatTriTable[triIndexBase + i] != -1; i += 3)
-					{
-						int indexStart = vertices.size();
-
-						glm::fvec3 v0 = vertList[FlatTriTable[triIndexBase + i]];
-						glm::fvec3 v1 = vertList[FlatTriTable[triIndexBase + i + 1]];
-						glm::fvec3 v2 = vertList[FlatTriTable[triIndexBase + i + 2]];
-
-						vertices.push_back(v0);
-						vertices.push_back(v1);
-						vertices.push_back(v2);
-
-						glm::fvec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
-						normals.push_back(normal);
-						normals.push_back(normal);
-						normals.push_back(normal);
-
-						indices.push_back(indexStart);
-						indices.push_back(indexStart + 1);
-						indices.push_back(indexStart + 2);
-					}
-				}
-			}
-		}
-		planeData.vertices = vertices;
-		planeData.indices = indices;
-		planeData.normals = normals;
-
-		//std::cout << vertices.size() << "\n";
-
-		return planeData;
-	}
-
-	VoxelMesh CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves) {
+	VoxelMesh* CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves) {
 		
 		int paddedHeight = height + 1;
 		int paddedWidth = width + 1;
 		int paddedDepth = depth + 1;
 
-		VoxelMesh mesh;
+		VoxelMesh* mesh = new VoxelMesh;
 
-		InitializeVoxelMesh(mesh, paddedWidth, paddedHeight, paddedDepth);
+		InitializeVoxelMesh(*mesh, paddedWidth, paddedHeight, paddedDepth);
 		
-		CreateMarchingCubesTriangles(mesh, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f);
+		CreateMarchingCubesTriangles(*mesh, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f);
 
 		return mesh;
 	}
