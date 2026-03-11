@@ -9,7 +9,7 @@
 
 class App {
 public:
-    App() {}
+    App() { std::cout << "test"; }
 
     void Run();
 

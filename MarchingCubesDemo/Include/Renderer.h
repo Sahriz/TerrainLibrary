@@ -66,8 +66,8 @@ private:
     float _persistance = 0.5f;
     
 
-    int _screenWidth = 1280;
-    int _screenHeight = 720;
+    int _screenWidth = 1900;
+    int _screenHeight = 1040;
     glm::mat4 _perspectiveMat;
     
     Camera _camera;

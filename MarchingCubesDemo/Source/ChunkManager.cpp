@@ -17,7 +17,15 @@ void ChunkManager::GetCPUContent(const glm::vec3& position) {
 
 		if (Core::PollAsyncReadback(*chunkData)) {
 			// 2. Erase it, and let C++ give us the iterator to the next item
+			PhysicsJob job;
+			job.type = PhysicsJob::Type::AddOrUpdate;
+			job.coord = *it;
+			job.vertices = chunkData->cpuMesh.vertices; // copy
+			job.normals = chunkData->cpuMesh.normals;   // optional
+			physics.EnqueueJob(std::move(job));
+
 			it = _chunkCoordsToGenerateToCPU.erase(it);
+
 			
 		}
 		else {
