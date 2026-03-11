@@ -1465,40 +1465,144 @@ namespace Core {
 		// 1. Read the exact vertex count from the Indirect Buffer
 		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingIndirect);
 		uint32_t* indirectData = (uint32_t*)glMapBufferRange(GL_COPY_READ_BUFFER, 0, 16, GL_MAP_READ_BIT);
+
+		if (indirectData == nullptr) {
+			std::cerr << "CRITICAL ERROR: Failed to map Indirect Staging Buffer!" << std::endl;
+			glUnmapBuffer(GL_COPY_READ_BUFFER);
+			return false;
+		}
+
 		uint32_t actualVertexCount = indirectData[0]; // The first integer is 'count'
+		//std::cout << "Actual Vertices: " << actualVertexCount << std::endl;
 		glUnmapBuffer(GL_COPY_READ_BUFFER);
 
-		// If the chunk is completely empty (sky or deep underground), we can exit early
+		// ==========================================
+		// FIX 1: THE EARLY EXIT TRAP
+		// ==========================================
 		if (actualVertexCount == 0) {
 			mesh.cpuMesh.isReady = true;
 			glDeleteSync(mesh.syncObj);
 			mesh.syncObj = nullptr;
+
+			// The chunk is empty, nuke ALL massive buffers!
+			glDeleteBuffers(1, &mesh.vboVertices);
+			glDeleteBuffers(1, &mesh.vboNormals);
+			glDeleteBuffers(1, &mesh.stagingVertices);
+			glDeleteBuffers(1, &mesh.stagingNormals);
+			glDeleteBuffers(1, &mesh.stagingIndirect);
+
+			// Zero the IDs so the destructor doesn't crash later
+			mesh.vboVertices = 0;
+			mesh.vboNormals = 0;
+			mesh.stagingVertices = 0;
+			mesh.stagingNormals = 0;
+			mesh.stagingIndirect = 0;
+
 			return true;
 		}
 
-		// 2. Resize our CPU vectors to perfectly fit the generated data
+		// ==========================================
+		// THE SHRINK WRAP (Your code, unchanged)
+		// ==========================================
+		GLuint tightVertices, tightNormals;
+		glGenBuffers(1, &tightVertices);
+		glGenBuffers(1, &tightNormals);
+
+		glBindBuffer(GL_COPY_WRITE_BUFFER, tightVertices);
+		glBufferData(GL_COPY_WRITE_BUFFER, actualVertexCount * sizeof(float) * 3, nullptr, GL_STATIC_DRAW);
+
+		GLenum err;
+		while ((err = glGetError()) != GL_NO_ERROR) {
+			std::cout << "OpenGL Error in PollAsyncReadback: " << err << std::endl;
+		}
+		glBindBuffer(GL_COPY_WRITE_BUFFER, tightNormals);
+		glBufferData(GL_COPY_WRITE_BUFFER, actualVertexCount * sizeof(float) * 3, nullptr, GL_STATIC_DRAW);
+
+		while ((err = glGetError()) != GL_NO_ERROR) {
+			std::cout << "OpenGL Error in PollAsyncReadback: " << err << std::endl;
+		}
+		glBindBuffer(GL_COPY_READ_BUFFER, mesh.vboVertices);
+		glBindBuffer(GL_COPY_WRITE_BUFFER, tightVertices);
+		glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, actualVertexCount * sizeof(float) * 3);
+
+		while ((err = glGetError()) != GL_NO_ERROR) {
+			std::cout << "OpenGL Error in PollAsyncReadback: " << err << std::endl;
+		}
+		glBindBuffer(GL_COPY_READ_BUFFER, mesh.vboNormals);
+		glBindBuffer(GL_COPY_WRITE_BUFFER, tightNormals);
+		glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, actualVertexCount * sizeof(float) * 3);
+
+		while ((err = glGetError()) != GL_NO_ERROR) {
+			std::cout << "OpenGL Error in PollAsyncReadback: " << err << std::endl;
+		}
+		glBindVertexArray(mesh.vao);
+		glBindBuffer(GL_ARRAY_BUFFER, tightVertices);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+		glBindBuffer(GL_ARRAY_BUFFER, tightNormals);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+		glBindVertexArray(0);
+
+		glDeleteBuffers(1, &mesh.vboVertices);
+		glDeleteBuffers(1, &mesh.vboNormals);
+
+		mesh.vboVertices = tightVertices;
+		mesh.vboNormals = tightNormals;
+
+		// ==========================================
+		// CPU READBACK (Your code, unchanged)
+		// ==========================================
 		mesh.cpuMesh.vertices.resize(actualVertexCount);
 		mesh.cpuMesh.normals.resize(actualVertexCount);
 
-		// 3. Map and copy Vertices
 		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingVertices);
 		float* mappedVerts = (float*)glMapBufferRange(GL_COPY_READ_BUFFER, 0, actualVertexCount * sizeof(float) * 3, GL_MAP_READ_BIT);
-		// Copy the flat float array into our clean glm::vec3 vector
 		memcpy(mesh.cpuMesh.vertices.data(), mappedVerts, actualVertexCount * sizeof(glm::vec3));
 		glUnmapBuffer(GL_COPY_READ_BUFFER);
 
-		// 4. Map and copy Normals
 		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingNormals);
 		float* mappedNormals = (float*)glMapBufferRange(GL_COPY_READ_BUFFER, 0, actualVertexCount * sizeof(float) * 3, GL_MAP_READ_BIT);
 		memcpy(mesh.cpuMesh.normals.data(), mappedNormals, actualVertexCount * sizeof(glm::vec3));
 		glUnmapBuffer(GL_COPY_READ_BUFFER);
 
-		// 5. Clean up the sync object so we don't poll it again
+
+		// ==========================================
+		// FIX 2: NUKE THE STAGING BUFFERS
+		// ==========================================
+		glDeleteBuffers(1, &mesh.stagingVertices);
+		glDeleteBuffers(1, &mesh.stagingNormals);
+		glDeleteBuffers(1, &mesh.stagingIndirect);
+
+		mesh.stagingVertices = 0;
+		mesh.stagingNormals = 0;
+		mesh.stagingIndirect = 0;
+
+		// Clean up the sync object
 		glDeleteSync(mesh.syncObj);
 		mesh.syncObj = nullptr;
 		mesh.cpuMesh.isReady = true;
 
 		return true; // Success! The CPU now has the exact triangles.
+	}
+
+	void VoxelMeshCleanUp(VoxelMesh& mesh) {
+
+		if (mesh.densitySSBO != 0) {
+			glDeleteBuffers(1, &mesh.densitySSBO);
+			mesh.densitySSBO = 0; 
+		}
+		glDeleteBuffers(1, &mesh.stagingVertices);
+		glDeleteBuffers(1, &mesh.stagingNormals);
+		glDeleteBuffers(1, &mesh.stagingIndirect);
+
+		// Zero them out
+		mesh.stagingVertices = 0;
+		mesh.stagingNormals = 0;
+		mesh.stagingIndirect = 0;
+
+		// Clean up the sync object
+		glDeleteSync(mesh.syncObj);
+		mesh.syncObj = nullptr;
+		mesh.cpuMesh.isReady = true;
 	}
 
 	void CreateMarchingCubesTriangles(VoxelMesh& mesh, int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso) {
@@ -1558,6 +1662,9 @@ namespace Core {
 		CreateFlat3DNoiseMap(*mesh, paddedWidth, paddedHeight, paddedDepth,offset,CleanUp,amplitude,frequency,persistance,lacunarity,octaves, false);
 		
 		CreateMarchingCubesTriangles(*mesh, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f);
+		
+		glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
 		StartAsyncReadback(*mesh);
 		return mesh;
 	}

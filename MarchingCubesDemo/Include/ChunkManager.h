@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <glm.hpp>
 #include <iostream>
+#include <algorithm>
 
 #include "Core/Core.h"
 
@@ -63,16 +64,16 @@ public:
 
 	}
 
-	std::unordered_map<ChunkCoord, Core::VoxelMesh>& GetChunkMap() {
+	std::unordered_map<ChunkCoord, Core::VoxelMesh*>& GetChunkMap() {
 		return _chunkMap;
 	}
 
 private:
-	std::unordered_map<ChunkCoord, Core::VoxelMesh> _chunkMap;
+	std::unordered_map<ChunkCoord, Core::VoxelMesh*> _chunkMap;
 	std::vector<glm::vec3> _chunkCoordsToGenerateToCPU;
 	float _scale = 0.1f;
 	float _amplitude = 1.0f;
-	float _frequency = 0.04f;
+	float _frequency = 0.1f;
 	int _octave = 5;
 	float _lacunarity = 2.0f;
 	float _persistance = 0.5f;
@@ -80,7 +81,7 @@ private:
 	int _height = 16;
 	int _depth = 16;
 	int _viewDistance = 5;
-
-	void DeleteChunk(Core::VoxelMesh& mesh);
+	void UnloadFarChunks(const glm::vec3& playerPosition);
+	void DeleteChunk(Core::VoxelMesh* mesh);
 
 };

@@ -116,6 +116,7 @@ namespace Core {
 
 	void Init();
 	void Cleanup();
+	void VoxelMeshCleanUp(VoxelMesh& mesh);
 	void PrintNumTrisTable();
 	std::vector<float> CreateFlat2DNoiseMap(const int width, const int height, const int depth, const glm::vec2 offset, bool CleanUp);
 	std::vector<float> CreateFlat3DNoiseMap(const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = false);

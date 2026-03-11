@@ -163,17 +163,17 @@ void Renderer::DrawChunks(ChunkManager& chunkManager) {
 
 	for (const glm::ivec3& coord : _chunkRenderer.GetActiveChunkSet()) {
 		//std::cout << "Drawing chunk at: " << coord.x << ", " << coord.y << ", " << coord.z << std::endl;
-		Core::VoxelMesh& mesh = chunkMap[coord];
-		if (!mesh.gpuLoaded) continue;
+		Core::VoxelMesh* mesh = chunkMap[coord];
+		if (!mesh->gpuLoaded) continue;
 
 		// If your vertices are NOT in world space yet, update model matrix:
 		// glm::mat4 chunkModel = glm::translate(glm::mat4(1.0f), glm::vec3(coord * 32));
 		// glUniformMatrix4fv(_modelMLocation, 1, GL_FALSE, glm::value_ptr(chunkModel));
 
-		glBindVertexArray(mesh.vao);
+		glBindVertexArray(mesh->vao);
 
 		// Mandatory for Indirect: Bind the buffer to the INDIRECT_BUFFER target
-		glBindBuffer(GL_DRAW_INDIRECT_BUFFER, mesh.indirectBuffer);
+		glBindBuffer(GL_DRAW_INDIRECT_BUFFER, mesh->indirectBuffer);
 
 		glDrawArraysIndirect(GL_TRIANGLES, (void*)0);
 	}
@@ -255,7 +255,7 @@ void Renderer::Render(ChunkManager& chunkManager) {
 }
 
 void Renderer::Cleanup(ChunkManager& chunkManager) {
-	chunkManager.DestroyChunks();
+	//chunkManager.DestroyChunks();
 	glDeleteProgram(_shaderProgram);
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();

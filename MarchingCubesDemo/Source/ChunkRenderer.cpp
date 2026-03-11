@@ -3,36 +3,25 @@
 
 
 void ChunkRenderer::UpdateActiveChunk(const glm::vec3& position, ChunkManager& chunkManager) {
-	
 	glm::vec3 playerChunk = chunkManager.GetChunkCoordFromPosition(position);
-	_previousFrameActiveChunkSet = _activeChunkSet;
 	_activeChunkSet.clear();
 	auto& chunkMap = chunkManager.GetChunkMap();
+
 	for (int x = -_viewDistance; x <= _viewDistance; x++) {
 		for (int y = -_viewDistance; y <= _viewDistance; y++) {
 			for (int z = -_viewDistance; z <= _viewDistance; z++) {
+
 				if (glm::abs(x * y * z) > _viewDistance * _viewDistance * _viewDistance / 1.5f) continue;
+
 				glm::vec3 coord = playerChunk + glm::vec3(x, y, z);
-				//std::cout << coord.x << " " << coord.y << " " << coord.z << "\n";
-				
+
+				// If it exists in the manager, we draw it! That's it!
 				if (chunkMap.find(coord) != chunkMap.end()) {
 					_activeChunkSet.insert(coord);
-					// Generate if not yet stored
-					
-					
-					if (!chunkMap[coord].gpuLoaded) {
-						SetupChunkRenderData(chunkMap[coord]);
-					}
 				}
 			}
-		}	
-	}
-	for (const glm::ivec3& coord : _previousFrameActiveChunkSet) {
-		if (_activeChunkSet.find(coord) == _activeChunkSet.end() && chunkMap[coord].gpuLoaded) {
-			CleanupChunkRenderData(chunkMap[coord]);
 		}
 	}
-	
 }
 
 void ChunkRenderer::SetupChunkRenderData(Core::VoxelMesh& mesh) {
@@ -53,7 +42,7 @@ void ChunkRenderer::SetupChunkRenderData(Core::VoxelMesh& mesh) {
 	mesh.gpuLoaded = true;
 }
 
-void ChunkRenderer::CleanupChunkRenderData(Core::VoxelMesh& mesh) {
+/*void ChunkRenderer::CleanupChunkRenderData(Core::VoxelMesh& mesh) {
 	if (!mesh.gpuLoaded) return;
 
 	// Delete everything including the new Indirect Buffer
@@ -73,5 +62,5 @@ void ChunkRenderer::CleanupChunkRenderData(Core::VoxelMesh& mesh) {
 	mesh.vao = 0;
 
 	mesh.gpuLoaded = false;
-}
+}*/
 

@@ -2,7 +2,8 @@
 
 void ChunkManager::Update(const glm::vec3& position) {
 	GenerateChunk(position);
-	//GetCPUContent(position);
+	GetCPUContent(position);
+	UnloadFarChunks(position); // Keep the VRAM clean!
 }
 
 void ChunkManager::QueueCPUContent(const glm::vec3& coord) {
@@ -12,14 +13,12 @@ void ChunkManager::QueueCPUContent(const glm::vec3& coord) {
 
 void ChunkManager::GetCPUContent(const glm::vec3& position) {
 	for (auto it = _chunkCoordsToGenerateToCPU.begin(); it != _chunkCoordsToGenerateToCPU.end(); ){
-		Core::VoxelMesh& chunkData = _chunkMap[*it];
+		Core::VoxelMesh* chunkData = _chunkMap[*it];
 
-		if (Core::PollAsyncReadback(chunkData)) {
-			std::cout << "fetched!\n"; // Fixed typo here!
-
+		if (Core::PollAsyncReadback(*chunkData)) {
 			// 2. Erase it, and let C++ give us the iterator to the next item
 			it = _chunkCoordsToGenerateToCPU.erase(it);
-			break;
+			
 		}
 		else {
 			// 3. Only move forward if we DID NOT erase anything
@@ -46,7 +45,7 @@ void ChunkManager::GenerateChunk(const glm::vec3& position) {
 					//the function call is GPU for the gpu implementtion. Please do keep in mind the noise map is still using compute shaders
 					//even on the cpu implementation, so that is technically a speedup that should not be granted as a possitive for the CPU part
 					//of this code. 
-					_chunkMap[coord] = std::move(*Core::CreateMarchingCubes3DMeshGPU(_width, _height, _depth, offset, false, _scale, _frequency, _persistance, _lacunarity, _octave)); 
+					_chunkMap[coord] = std::move(Core::CreateMarchingCubes3DMeshGPU(_width, _height, _depth, offset, false, _scale, _frequency, _persistance, _lacunarity, _octave)); 
 					numberOfGeneratedChunksOnThisFrame++;
 					QueueCPUContent(coord);
 				}
@@ -62,20 +61,61 @@ void ChunkManager::DestroyChunks() {
 	_chunkMap.clear();
 }
 
-void ChunkManager::DeleteChunk(Core::VoxelMesh& mesh) {
+void ChunkManager::UnloadFarChunks(const glm::vec3& playerPosition) {
+	// 1. Get player's chunk coordinate (use your existing function)
+	glm::ivec3 playerChunk = GetChunkCoordFromPosition(playerPosition);
 
-	// Free GPU memory
-	if (mesh.vboVertices) glDeleteBuffers(1, &mesh.vboVertices);
-	if (mesh.vboNormals) glDeleteBuffers(1, &mesh.vboNormals);
-	if (mesh.vao) glDeleteVertexArrays(1, &mesh.vao);
-	if (mesh.indirectBuffer) glDeleteBuffers(1, &mesh.indirectBuffer);
-	if (mesh.ssboIndices) glDeleteBuffers(1, &mesh.ssboIndices);
-	
+	// 2. Set unload distance slightly larger than view distance to prevent flickering
+	int unloadDist = _viewDistance + 2;
 
+	for (auto it = _chunkMap.begin(); it != _chunkMap.end(); ) {
+		glm::ivec3 chunkCoord = it->first;
 
-	mesh.vboNormals = 0;
-	mesh.vboVertices = 0;
-	mesh.vao = 0;
+		// 3. Calculate cubic distance on the grid
+		int distX = std::abs(chunkCoord.x - playerChunk.x);
+		int distY = std::abs(chunkCoord.y - playerChunk.y);
+		int distZ = std::abs(chunkCoord.z - playerChunk.z);
 
-	mesh.gpuLoaded = false;
+		// If it falls outside our cube...
+		if (distX > unloadDist || distY > unloadDist || distZ > unloadDist) {
+
+			// 4. FIX THE GHOST QUEUE: Remove it from the pending CPU readback list!
+			auto queueIt = std::find_if(_chunkCoordsToGenerateToCPU.begin(), _chunkCoordsToGenerateToCPU.end(),
+				[&chunkCoord](const glm::vec3& v) {
+					return v.x == chunkCoord.x && v.y == chunkCoord.y && v.z == chunkCoord.z;
+				});
+
+			if (queueIt != _chunkCoordsToGenerateToCPU.end()) {
+				_chunkCoordsToGenerateToCPU.erase(queueIt);
+			}
+
+			// 5. Nuke everything safely
+			DeleteChunk(it->second);
+			it = _chunkMap.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+}
+
+void ChunkManager::DeleteChunk(Core::VoxelMesh* mesh) {
+	if (!mesh) return;
+
+	// Free standard GPU memory
+	if (mesh->vboVertices) glDeleteBuffers(1, &mesh->vboVertices);
+	if (mesh->vboNormals) glDeleteBuffers(1, &mesh->vboNormals);
+	if (mesh->vao) glDeleteVertexArrays(1, &mesh->vao);
+	if (mesh->indirectBuffer) glDeleteBuffers(1, &mesh->indirectBuffer);
+	if (mesh->ssboIndices) glDeleteBuffers(1, &mesh->ssboIndices);
+
+	// --- THE LEAK FIX: Free the massive Staging Buffers! ---
+	if (mesh->stagingVertices) glDeleteBuffers(1, &mesh->stagingVertices);
+	if (mesh->stagingNormals) glDeleteBuffers(1, &mesh->stagingNormals);
+	if (mesh->stagingIndirect) glDeleteBuffers(1, &mesh->stagingIndirect);
+
+	if (mesh->syncObj) glDeleteSync(mesh->syncObj);
+
+	// Delete the C++ object from RAM
+	delete mesh;
 }
