@@ -24,6 +24,9 @@ include "Vendor/Glad/Build-Glad.lua"
 
 include "Vendor/imgui/Build-imgui.lua"
 
+include "Vendor/JoltPhysics/Build-JoltPhysics.lua"
+
 include "MarchingCubesDemo/Build-MarchingCubesDemo.lua"
 
 include "VoxelCubesDemo/Build-VoxelCubesDemo.lua"
+

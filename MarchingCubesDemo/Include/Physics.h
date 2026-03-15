@@ -6,6 +6,8 @@
 #include <thread>
 #include <atomic>
 #include "Core/Core.h"
+#include "Jolt/Jolt.h"
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
 
 struct PhysicsJob {
     enum class Type { AddOrUpdate, Remove } type;
@@ -51,10 +53,39 @@ private:
 
                 job = std::move(_queue.front());
                 _queue.pop();
+
             }
 
-            // TODO: Create or update collider for job.coord using job.vertices
-            // TODO: Handle remove jobs
+            if (job.type == PhysicsJob::Type::AddOrUpdate) {
+                JPH::TriangleList joltTriangles;
+                joltTriangles.reserve(job.vertices.size() / 3);
+
+                // 1. Convert GLM vertices to Jolt Triangles
+                for (size_t i = 0; i < job.vertices.size(); i += 3) {
+                    JPH::Triangle tri(
+                        JPH::Float3(job.vertices[i].x, job.vertices[i].y, job.vertices[i].z),
+                        JPH::Float3(job.vertices[i + 1].x, job.vertices[i + 1].y, job.vertices[i + 1].z),
+                        JPH::Float3(job.vertices[i + 2].x, job.vertices[i + 2].y, job.vertices[i + 2].z)
+                    );
+                    joltTriangles.push_back(tri);
+                }
+
+                // 2. Define the settings for the Mesh Shape
+                JPH::MeshShapeSettings meshSettings(joltTriangles);
+
+                // 3. Bake the actual collision shape!
+                // (In a real engine, you'd pass this shape to Jolt's BodyInterface to spawn it in the world)
+                JPH::ShapeSettings::ShapeResult shapeResult = meshSettings.Create();
+
+                if (shapeResult.HasError()) {
+                    // Handle the error (e.g., invalid triangles)
+                }
+                else {
+                    JPH::ShapeRefC terrainShape = shapeResult.Get();
+                    // DONE: You now have a highly optimized Jolt Triangle Mesh!
+                }
+            }
+
         }
     }
 

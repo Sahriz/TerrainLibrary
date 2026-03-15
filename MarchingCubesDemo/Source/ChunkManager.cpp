@@ -1,8 +1,8 @@
 #include "ChunkManager.h"
 
-void ChunkManager::Update(const glm::vec3& position) {
+void ChunkManager::Update(const glm::vec3& position, Physics& physics) {
 	GenerateChunk(position);
-	GetCPUContent(position);
+	GetCPUContent(position, physics);
 	UnloadFarChunks(position); // Keep the VRAM clean!
 }
 
@@ -11,7 +11,7 @@ void ChunkManager::QueueCPUContent(const glm::vec3& coord) {
 	_chunkCoordsToGenerateToCPU.push_back(coord);
 }
 
-void ChunkManager::GetCPUContent(const glm::vec3& position) {
+void ChunkManager::GetCPUContent(const glm::vec3& position, Physics& physics) {
 	for (auto it = _chunkCoordsToGenerateToCPU.begin(); it != _chunkCoordsToGenerateToCPU.end(); ){
 		Core::VoxelMesh* chunkData = _chunkMap[*it];
 

@@ -6,10 +6,11 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include "Physics.h"
 
 class App {
 public:
-    App() { std::cout << "test"; }
+    App() { _physics.Start(); }
 
     void Run();
 
@@ -18,6 +19,7 @@ public:
 private:
     Renderer _renderer;
     ChunkManager _chunkManager;
+    Physics _physics;
 
     using Clock = std::chrono::high_resolution_clock;
     using Time = std::chrono::duration<double>;

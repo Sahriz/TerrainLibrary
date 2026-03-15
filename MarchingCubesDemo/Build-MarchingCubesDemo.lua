@@ -13,16 +13,17 @@ project "MarchingCubesDemo"
       "Source",
       "Include",
       "Shaders",
-       "../Vendor/glm",
-       "../Vendor/glm/gtc",
+       "%{wks.location}/Vendor/glm",
+       "%{wks.location}/Vendor/glm/gtc",
 
 	  -- Include Core
-	  "../Core/Source",
-      "../Vendor/glfw/include",
-      "../Vendor/Glad/include",
-      "../Vendor/imgui",
-      "../Vendor/imgui/backends",
-      "../Vendor/glfw/backends",
+	  "%{wks.location}/Core/Source",
+      "%{wks.location}/Vendor/glfw/include",
+      "%{wks.location}/Vendor/Glad/include",
+      "%{wks.location}/Vendor/imgui",
+      "%{wks.location}/Vendor/imgui/backends",
+      "%{wks.location}/Vendor/glfw/backends",
+      "%{wks.location}/Vendor/JoltPhysics"
    }
 
    links
@@ -31,12 +32,13 @@ project "MarchingCubesDemo"
       "GLFW",
       "Glad",
       "ImGui",
-      "opengl32.lib"
+      "opengl32.lib",
+      "JoltPhysics"
 
    }
 
-   targetdir ("../Binaries/" .. OutputDir .. "/%{prj.name}")
-   objdir ("../Binaries/Intermediates/" .. OutputDir .. "/%{prj.name}")
+   targetdir ("%{wks.location}/Binaries/" .. OutputDir .. "/%{prj.name}")
+   objdir ("%{wks.location}/Binaries/Intermediates/" .. OutputDir .. "/%{prj.name}")
 
    filter "system:windows"
        systemversion "latest"

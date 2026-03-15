@@ -31,13 +31,14 @@ public:
 
 	void DestroyChunks();
 
-	void Update(const glm::vec3& position);
+	void Update(const glm::vec3& position, Physics& physics);
 
 	void QueueCPUContent(const glm::vec3& coord);
 
-	void GetCPUContent(const glm::vec3& position);
+	void GetCPUContent(const glm::vec3& position, Physics& physics);
 
 	void GenerateChunk(const glm::vec3& position);
+
 
 	glm::vec3 GetChunkCoordFromPosition(const glm::vec3& position) const {
 		float xScale = 1.0f / _width;
@@ -72,6 +73,7 @@ public:
 private:
 	std::unordered_map<ChunkCoord, Core::VoxelMesh*> _chunkMap;
 	std::vector<glm::vec3> _chunkCoordsToGenerateToCPU;
+	Physics _physics;
 	float _scale = 0.1f;
 	float _amplitude = 1.0f;
 	float _frequency = 0.08f;
@@ -81,7 +83,7 @@ private:
 	int _width = 16;
 	int _height = 16;
 	int _depth = 16;
-	int _viewDistance = 5;
+	int _viewDistance = 3;
 	void UnloadFarChunks(const glm::vec3& playerPosition);
 	void DeleteChunk(Core::VoxelMesh* mesh);
 

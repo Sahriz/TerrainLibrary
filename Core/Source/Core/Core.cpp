@@ -1564,7 +1564,7 @@ namespace Core {
 		memcpy(mesh.cpuMesh.normals.data(), mappedNormals, actualVertexCount * sizeof(glm::vec3));
 		glUnmapBuffer(GL_COPY_READ_BUFFER);
 
-
+		std::cout << actualVertexCount << " vertices read back to CPU." << std::endl;
 		// ==========================================
 		// FIX 2: NUKE THE STAGING BUFFERS
 		// ==========================================
