@@ -83,5 +83,4 @@ private:
 	int _viewDistance = 5;
 	void UnloadFarChunks(const glm::vec3& playerPosition);
 	void DeleteChunk(Core::VoxelMesh* mesh);
-
 };

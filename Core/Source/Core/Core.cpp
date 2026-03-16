@@ -1039,21 +1039,18 @@ namespace Core {
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 	}
-	void CreateFlat3DNoiseMapPipeLine(BlockIds& blockIDs, const Spline& spline, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency, const bool useDropoff) {
+	void CreateFlat3DNoiseMapPipeLine(VoxelCubeMesh& mesh, const Spline& spline, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency, const bool useDropoff) {
 		int sizeOfNoiseMap = width * height * depth;
-		blockIDs.IDs.resize(sizeOfNoiseMap);
 
-		GLuint ssboNoise;
-		glGenBuffers(1, &ssboNoise);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, blockIDs.IDs.size() * sizeof(int), blockIDs.IDs.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
+		glGenBuffers(1, &mesh.blockID_SSBO);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.blockID_SSBO);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeOfNoiseMap * sizeof(int), NULL, GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.blockID_SSBO);
 
-		GLuint ssboSplinePoints;
-		glGenBuffers(1, &ssboSplinePoints);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboSplinePoints);
+		glGenBuffers(1, &mesh.splineSSBO);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.splineSSBO);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, spline.points.size() * sizeof(glm::vec2), spline.points.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboSplinePoints);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, mesh.splineSSBO);
 
 		GLint widthLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "width");
 		GLint heightLoc = glGetUniformLocation(_3DNoiseMapPipelineComputeShader, "height");
@@ -1079,28 +1076,12 @@ namespace Core {
 			(GLuint)ceil(depth / 8.0f)
 		);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		int* ptr = (int*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		// Copy or use data
-		if (ptr) {
-			blockIDs.IDs.assign(ptr, ptr + blockIDs.IDs.size());
-			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		}
-		else {
-			std::cout << "Something went wrong in CreateVertices";
-		}
-
-		glDeleteBuffers(1, &ssboNoise);
-		glDeleteBuffers(1, &ssboSplinePoints);
 	}
-	void TerrainPaint(BlockIds& blockIDs, int width, int height, int depth) {
+	void TerrainPaint(VoxelCubeMesh& mesh, int width, int height, int depth) {
+		int sizeOfNoiseMap = width * height * depth;
 
-		GLuint ssboIDs;
-		glGenBuffers(1, &ssboIDs);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIDs);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, blockIDs.IDs.size() * sizeof(int), blockIDs.IDs.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboIDs);
+
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.blockID_SSBO);
 
 
 		GLint widthLoc = glGetUniformLocation(_voxelTerrainPainterComputeShader, "width");
@@ -1119,19 +1100,6 @@ namespace Core {
 			(GLuint)ceil(depth / 8.0f)
 		);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIDs);
-		int* ptr = (int*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		// Copy or use data
-		if (ptr) {
-			blockIDs.IDs.assign(ptr, ptr + blockIDs.IDs.size());
-			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		}
-		else {
-			std::cout << "Something went wrong in CreateVertices";
-		}
-
-		glDeleteBuffers(1, &ssboIDs);
 	}
 
 	void CreateVertices(PlaneMesh& planeData, int width, int height, glm::ivec2 offset, bool CleanUp) {
@@ -1391,7 +1359,7 @@ namespace Core {
 			glBindVertexArray(0);
 		}
 	}
-	void SetupAppendBuffer(AppendBuffer& ab, int width, int height, int depth) {
+	void SetupAppendBufferVoxelMesh(AppendBuffer& ab, int width, int height, int depth) {
 		ab.maxCapacity = width * height * depth;
 
 		// 1. Setup Counter (just 4 bytes)
@@ -1786,15 +1754,12 @@ namespace Core {
 		return p1 + mu * (p2 - p1);
 	}
 
-	int VoxelCubesQuadCount(int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp) {
+	int VoxelCubesQuadCount(VoxelCubeMesh& mesh, int width, int heigth, int depth, glm::vec3 offset, bool CleanUp) {
+		
+
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.blockID_SSBO);
+
 		GLuint ssboCounter;
-		GLuint ssboNoise;
-
-		glGenBuffers(1, &ssboNoise);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, blockIDs.IDs.size() * sizeof(int), blockIDs.IDs.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
-
 		int initial = 0;
 		glGenBuffers(1, &ssboCounter);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
@@ -1823,52 +1788,36 @@ namespace Core {
 			vertexCount = *ptr;
 			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 		}
-		else {
-			std::cout << "Something went wrong in CreateVertices";
-		}
-		glDeleteBuffers(1, &ssboCounter);
-		glDeleteBuffers(1, &ssboNoise);
 		return vertexCount;
 	}
 
-	void VoxelCubesGeometryInit(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, int quadCount, bool CleanUp) {
+	void VoxelCubesGeometryInit(VoxelCubeMesh& mesh, int width, int heigth, int depth, glm::vec3 offset, int quadCount, bool CleanUp) {
 		std::vector<glm::vec3> vertices;
 		std::vector<glm::vec3> normals;
 		std::vector<int> indices;
 		std::vector<glm::vec2> UVs;
+		
+		int gridSize = width * heigth * depth;
 
 		vertices.resize(quadCount * 4);
 		normals.resize(quadCount * 4);
 		indices.resize(quadCount * 6);
 		UVs.resize(quadCount * 4);
 
-		GLuint ssboNoise;
-		GLuint ssboVertex;
-		GLuint ssboNormal;
-		GLuint ssboIndex;
 		GLuint ssboIndexCounter;
 		GLuint ssboVertexCounter;
-		GLuint ssboUV;
 
-		glGenBuffers(1, &ssboNoise);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNoise);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, blockIDs.IDs.size() * sizeof(int), blockIDs.IDs.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboNoise);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.blockID_SSBO);
 
-		glGenBuffers(1, &ssboVertex);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertex);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, 3 * vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboVertex);
+		glGenBuffers(1, &mesh.vbo);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.vbo);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, 4 * quadCount * sizeof(VoxelCubeCombinedVertex),NULL, GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, mesh.vbo);
 
-		glGenBuffers(1, &ssboNormal);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormal);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, 3 * normals.size() * sizeof(float), normals.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboNormal);
-
-		glGenBuffers(1, &ssboIndex);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndex);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, indices.size() * sizeof(int), indices.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboIndex);
+		glGenBuffers(1, &mesh.ibo);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.ibo);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, 4 * quadCount * sizeof(int), NULL, GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, mesh.ibo);
 
 		int initialIndex = 0;
 		glGenBuffers(1, &ssboIndexCounter);
@@ -1882,10 +1831,6 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(int), &initialVertex, GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, ssboVertexCounter);
 
-		glGenBuffers(1, &ssboUV);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboUV);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, UVs.size() * sizeof(glm::vec2), UVs.data(), GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, ssboUV);
 
 		GLint widthLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "gridWidth");
 		GLint heightLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "gridHeight");
@@ -1907,38 +1852,13 @@ namespace Core {
 			(GLuint)ceil((heigth) / 8.0f), (GLuint)ceil((depth) / 8.0f));
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertex);
-		glm::vec3* vertexPtr = (glm::vec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		if (vertexPtr) {
-			planeData.vertices.assign(vertexPtr, vertexPtr + vertices.size());
-		}
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboNormal);
-		glm::vec3* normalsPtr = (glm::vec3*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		if (normalsPtr) {
-			planeData.normals.assign(normalsPtr, normalsPtr + normals.size());
-		}
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndex);
-		int* IndexPtr = (int*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		if (IndexPtr) {
-			planeData.indices.assign(IndexPtr, IndexPtr + indices.size());
-		}
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboUV);
-		glm::vec2* UVPtr = (glm::vec2*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-		if (UVPtr) {
-			planeData.UVs.assign(UVPtr, UVPtr + UVs.size());
-		}
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		glDeleteBuffers(1, &ssboNoise);
-		glDeleteBuffers(1, &ssboVertex);
-		glDeleteBuffers(1, &ssboNormal);
-		glDeleteBuffers(1, &ssboIndex);
-		glDeleteBuffers(1, &ssboUV);
-		glDeleteBuffers(1, &ssboIndexCounter);
-		glDeleteBuffers(1, &ssboVertexCounter);
+
 	}
 
-	VoxelData CreateVoxelCubes3DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff) {
-		PlaneMesh planeData;
+	VoxelCubeMesh* CreateVoxelCubes3DMesh(int width, int height, int depth, glm::vec2 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff) {
+		VoxelCubeMesh* cubeMeshData = new VoxelCubeMesh();
+		cubeMeshData->gpuLoaded = true;
 		int paddedWidth = width + 2;
 		int paddedHeight = height + 2;
 		int paddedDepth = depth + 2;
@@ -1975,13 +1895,13 @@ namespace Core {
 		spline.points.push_back(SplinePoint(0.98f, 1.4f));
 		spline.points.push_back(SplinePoint(1.0f, 1.45f));
 
-		CreateFlat3DNoiseMapPipeLine(blockIDs, spline, paddedWidth, paddedHeight, paddedDepth, offset3D, true, frequency, true);
-		TerrainPaint(blockIDs, paddedWidth, paddedHeight, paddedDepth);
+		CreateFlat3DNoiseMapPipeLine(*cubeMeshData, spline, paddedWidth, paddedHeight, paddedDepth, offset3D, true, frequency, true);
+		TerrainPaint(*cubeMeshData, paddedWidth, paddedHeight, paddedDepth);
 
 
-		int quadCount = VoxelCubesQuadCount(paddedWidth, paddedHeight, paddedDepth, offset3D, blockIDs, CleanUp);
-		VoxelCubesGeometryInit(planeData, paddedWidth, paddedHeight, paddedDepth, offset3D, blockIDs, quadCount, CleanUp);
+		int quadCount = VoxelCubesQuadCount(*cubeMeshData, paddedWidth, paddedHeight, paddedDepth, offset3D, CleanUp);
+		VoxelCubesGeometryInit(*cubeMeshData, paddedWidth, paddedHeight, paddedDepth, offset3D, quadCount, CleanUp);
 
-		return VoxelData(planeData,blockIDs);
+		return cubeMeshData;
 	}
 }

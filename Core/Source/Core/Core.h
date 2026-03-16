@@ -94,6 +94,42 @@ namespace Core {
 			}
 		}
 	};
+
+	struct VoxelCubeCombinedVertex {
+		glm::vec3 position;
+		glm::vec3 normal;
+		glm::vec2 uv;
+	};
+	struct VoxelCubeMesh {
+		GLuint vao = 0;
+		GLuint vbo = 0;      // Combined Vertex/Normal/UV data
+		GLuint ibo = 0;      // Indices
+		GLuint blockID_SSBO = 0; // The 3D grid of Block IDs
+		GLuint indirectBuffer = 0; // For indirect draw calls
+		GLuint densitySSBO = 0; // For storing the density values of the voxel grid
+		GLuint splineSSBO = 0; // For storing spline data for the pipeline noise map
+		
+
+		GLuint stagingVBO = 0;
+		GLuint stagingIBO = 0;
+		GLsync syncObj = nullptr;
+
+		int maxQuards = 0;
+		bool gpuLoaded = false;
+
+		~VoxelCubeMesh() {
+			if (gpuLoaded) {
+				glDeleteVertexArrays(1, &vao);
+				glDeleteBuffers(1, &vbo);
+				glDeleteBuffers(1, &ibo);
+				glDeleteBuffers(1, &blockID_SSBO);
+				glDeleteBuffers(1, &stagingVBO);
+				glDeleteBuffers(1, &stagingIBO);
+				if (syncObj) glDeleteSync(syncObj);
+			}
+		}
+	};
+
 	struct NoiseMapData
 	{
 		std::vector<float> noiseMap;
@@ -102,8 +138,8 @@ namespace Core {
 		std::vector<int> IDs;
 	};
 	struct VoxelData {
-		VoxelData(PlaneMesh meshdata, BlockIds blockids) { meshData = meshdata; blockIDs = blockids; }
-		PlaneMesh meshData;
+		VoxelData(VoxelCubeMesh& meshdata, BlockIds& blockids) { meshData = meshdata; blockIDs = blockids; }
+		VoxelCubeMesh meshData;
 		BlockIds blockIDs;
 	};
 	
@@ -129,7 +165,7 @@ namespace Core {
 	std::vector<float> CreateFlat3DNoiseMap(const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = false);
 	void CreateFlat3DNoiseMap(VoxelMesh& mesh, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves, const bool useDropoff);
 	void CreateFlat3DNoiseMapPipeLine(BlockIds& blockIDs, const Spline& spline, const int width, const int height, const int depth, const glm::vec3 offset, bool CleanUp, const float frequency = 1.0f, const bool useDropoff = false);
-	void TerrainPaint(BlockIds& blockIDs, int width, int height, int depth);
+	void TerrainPaint(VoxelCubeMesh& mesh, int width, int height, int depth);
 
 	void CreateVertices(PlaneMesh& planeData, int width, int height, glm::ivec2 offset = glm::ivec2(0,0), bool CleanUp = true);
 	void CreateIndices(PlaneMesh& planeData, int width, int height, bool CleanUp);
@@ -139,7 +175,7 @@ namespace Core {
 	
 	glm::vec3 VertInterp(float iso, glm::vec3 p1, glm::vec3 p2, float v1, float v2);
 	int GetActiveCountFromGPU(AppendBuffer& ab);
-	void SetupAppendBuffer(AppendBuffer& ab, int width, int height, int depth);
+	void SetupAppendBufferVoxelMesh(AppendBuffer& ab, int width, int height, int depth);
 	int CountMarchingCubesTriangleCount(VoxelMesh& mesh, AppendBuffer& ab, int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso);
 	void InitializeVoxelMesh(VoxelMesh& mesh, int width, int height, int depth);
 	void CreateMarchingCubesTriangles(VoxelMesh& mesh, AppendBuffer& ab, int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso, int count);
@@ -149,9 +185,12 @@ namespace Core {
 	VoxelMesh* CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5);
 	void StartAsyncReadback(VoxelMesh& mesh);
 	bool PollAsyncReadback(VoxelMesh& mesh);
-	
 
-	int VoxelCubesQuadCount(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp);
-	void VoxelCubesGeometryInit(PlaneMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp);
-	VoxelData CreateVoxelCubes3DMesh(int width, int heigth, int depth, glm::vec2 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = true);
+
+	void SetupAppendBuffer(AppendBuffer& ab, int width, int height, int depth);
+	void StartAsyncReadback(VoxelCubeMesh& mesh);
+	bool PollAsyncReadback(VoxelCubeMesh& mesh);
+	int VoxelCubesQuadCount(VoxelCubeMesh& mesh, int width, int heigth, int depth, glm::vec3 offset, bool CleanUp);
+	void VoxelCubesGeometryInit(VoxelCubeMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp);
+	VoxelCubeMesh* CreateVoxelCubes3DMesh(int width, int heigth, int depth, glm::vec2 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = true);
 }
