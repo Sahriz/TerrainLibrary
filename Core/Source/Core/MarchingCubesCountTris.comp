@@ -2,8 +2,12 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
-layout(std430, binding = 0) buffer CounterBuffer{
-	int triangleCount;
+layout(std430, binding = 0) buffer DensityBuffer {
+    float densities[];
+};
+
+layout(std430, binding = 1) buffer IndirectBuffer {
+    uint count;         // Number of vertices to draw
 };
 
 layout(std430, binding = 2) buffer TriTableBuffer{
@@ -17,7 +21,7 @@ uniform int depth;
 uniform vec3 offset;
 uniform float isoLevel;
 
-vec3 cornerOffsets[] = 
+const vec3 cornerOffsets[] = 
 		{
 			vec3(0, 0, 0),
 			vec3(1, 0, 0),
@@ -29,7 +33,7 @@ vec3 cornerOffsets[] =
 			vec3(0, 1, 1),
 		};
 
-int edgeTable[] =  {
+const int edgeTable[] =  {
 			0x0, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
 				0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
 				0x190, 0x99, 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c,
@@ -64,97 +68,6 @@ int edgeTable[] =  {
 				0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0   };
 
 
-
-vec3 VertInterp(float iso, vec3 p1, vec3 p2, float v1, float v2)
-{
-    // Handle edge cases to match Bourke's paper
-    if (abs(iso - v1) < 0.00001f)
-        return p1;
-    if (abs(iso - v2) < 0.00001f)
-        return p2;
-    if (abs(v1 - v2) < 0.00001f)
-        return p1;
-    
-    
-
-    float mu = (iso - v1) / (v2 - v1);
-    return p1 + mu * (p2 - p1);
-}
-
-
-
-vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
-vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
-
-float snoise(vec3 v){ 
-  const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
-  const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
-
-// First corner
-  vec3 i  = floor(v + dot(v, C.yyy) );
-  vec3 x0 =   v - i + dot(i, C.xxx) ;
-
-// Other corners
-  vec3 g = step(x0.yzx, x0.xyz);
-  vec3 l = 1.0 - g;
-  vec3 i1 = min( g.xyz, l.zxy );
-  vec3 i2 = max( g.xyz, l.zxy );
-
-  //  x0 = x0 - 0. + 0.0 * C 
-  vec3 x1 = x0 - i1 + 1.0 * C.xxx;
-  vec3 x2 = x0 - i2 + 2.0 * C.xxx;
-  vec3 x3 = x0 - 1. + 3.0 * C.xxx;
-
-// Permutations
-  i = mod(i, 289.0 ); 
-  vec4 p = permute( permute( permute( 
-             i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
-           + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) 
-           + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
-
-// Gradients
-// ( N*N points uniformly over a square, mapped onto an octahedron.)
-  float n_ = 1.0/7.0; // N=7
-  vec3  ns = n_ * D.wyz - D.xzx;
-
-  vec4 j = p - 49.0 * floor(p * ns.z *ns.z);  //  mod(p,N*N)
-
-  vec4 x_ = floor(j * ns.z);
-  vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)
-
-  vec4 x = x_ *ns.x + ns.yyyy;
-  vec4 y = y_ *ns.x + ns.yyyy;
-  vec4 h = 1.0 - abs(x) - abs(y);
-
-  vec4 b0 = vec4( x.xy, y.xy );
-  vec4 b1 = vec4( x.zw, y.zw );
-
-  vec4 s0 = floor(b0)*2.0 + 1.0;
-  vec4 s1 = floor(b1)*2.0 + 1.0;
-  vec4 sh = -step(h, vec4(0.0));
-
-  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
-  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
-
-  vec3 p0 = vec3(a0.xy,h.x);
-  vec3 p1 = vec3(a0.zw,h.y);
-  vec3 p2 = vec3(a1.xy,h.z);
-  vec3 p3 = vec3(a1.zw,h.w);
-
-//Normalise gradients
-  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
-  p0 *= norm.x;
-  p1 *= norm.y;
-  p2 *= norm.z;
-  p3 *= norm.w;
-
-// Mix final noise value
-  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-  m = m * m;
-  return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), 
-                                dot(p2,x2), dot(p3,x3) ) );
-}
-
 void main(){
 	vec3 Pos = gl_GlobalInvocationID;
 
@@ -165,19 +78,11 @@ void main(){
     float cubeValues[8];
 	for (int i = 0; i < 8; i++)
     {
-        vec3 corner = Pos + cornerOffsets[i];
-        int ix = int(corner.x);
-        int iy = int(corner.y);
-        int iz = int(corner.z);
-        
-        ix = clamp(ix, 0, width);
-        iy = clamp(iy, 0, height);
-        iz = clamp(iz, 0, depth);
+        vec3 cornerPos = Pos + cornerOffsets[i];
+        uint cornerIndex = uint(cornerPos.x + (cornerPos.y * width) + (cornerPos.z * width * height));
+        cubeCorners[i] = cornerPos + offset; // optionally scale it
 
-        int idx = ix + iy * (width) + iz * (width) * (height);
-        cubeCorners[i] = (corner + vec3(offset.x, offset.y, offset.z)); // optionally scale it
-
-        cubeValues[i] = snoise(cubeCorners[i] * frequency);
+        cubeValues[i] = densities[cornerIndex];
     }
 
 // 2. Calculate cubeIndex
@@ -191,37 +96,10 @@ void main(){
     if (edgeTable[cubeIndex] == 0)
         return;
 
-    // 4. Compute interpolated vertex positions
-    vec3 vertList[12];
-    if ((edgeTable[cubeIndex] & 1) != 0)
-        vertList[0] = VertInterp(isoLevel, cubeCorners[0], cubeCorners[1], cubeValues[0], cubeValues[1]);
-    if ((edgeTable[cubeIndex] & 2) != 0)
-        vertList[1] = VertInterp(isoLevel, cubeCorners[1], cubeCorners[2], cubeValues[1], cubeValues[2]);
-    if ((edgeTable[cubeIndex] & 4) != 0)
-        vertList[2] = VertInterp(isoLevel, cubeCorners[2], cubeCorners[3], cubeValues[2], cubeValues[3]);
-    if ((edgeTable[cubeIndex] & 8) != 0)
-        vertList[3] = VertInterp(isoLevel, cubeCorners[3], cubeCorners[0], cubeValues[3], cubeValues[0]);
-    if ((edgeTable[cubeIndex] & 16) != 0)
-        vertList[4] = VertInterp(isoLevel, cubeCorners[4], cubeCorners[5], cubeValues[4], cubeValues[5]);
-    if ((edgeTable[cubeIndex] & 32) != 0)
-        vertList[5] = VertInterp(isoLevel, cubeCorners[5], cubeCorners[6], cubeValues[5], cubeValues[6]);
-    if ((edgeTable[cubeIndex] & 64) != 0)
-        vertList[6] = VertInterp(isoLevel, cubeCorners[6], cubeCorners[7], cubeValues[6], cubeValues[7]);
-    if ((edgeTable[cubeIndex] & 128) != 0)
-        vertList[7] = VertInterp(isoLevel, cubeCorners[7], cubeCorners[4], cubeValues[7], cubeValues[4]);
-    if ((edgeTable[cubeIndex] & 256) != 0)
-        vertList[8] = VertInterp(isoLevel, cubeCorners[0], cubeCorners[4], cubeValues[0], cubeValues[4]);
-    if ((edgeTable[cubeIndex] & 512) != 0)
-        vertList[9] = VertInterp(isoLevel, cubeCorners[1], cubeCorners[5], cubeValues[1], cubeValues[5]);
-    if ((edgeTable[cubeIndex] & 1024) != 0)
-        vertList[10] = VertInterp(isoLevel, cubeCorners[2], cubeCorners[6], cubeValues[2], cubeValues[6]);
-    if ((edgeTable[cubeIndex] & 2048) != 0)
-        vertList[11] = VertInterp(isoLevel, cubeCorners[3], cubeCorners[7], cubeValues[3], cubeValues[7]);
-
-// 5. Emit triangles
+// 3. Count triangles
     int triIndexBase = cubeIndex * 16;
     for (int q = 0; triTable[triIndexBase + q] != -1; q += 3)
     {
-       atomicAdd(triangleCount, 3);
+       atomicAdd(count, 9);
     }
 }

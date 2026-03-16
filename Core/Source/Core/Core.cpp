@@ -1326,59 +1326,9 @@ namespace Core {
 		return planeData;
 	}	
 
-	int CountMarchingCubesTriangleCount(int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso) {
-		GLuint ssboCounter;
-		int initial = 0;
-		glGenBuffers(1, &ssboCounter);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, 1 * sizeof(int), &initial, GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssboCounter);
-
-		GLuint ssboFlatTriTable;
-		glGenBuffers(1, &ssboFlatTriTable);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboFlatTriTable);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, 256*16 * sizeof(int), FlatTriTable, GL_STATIC_DRAW);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssboFlatTriTable);
-
-		GLint frequencyLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "frequency");
-		GLint widthLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "width");
-		GLint heightLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "height");
-		GLint depthLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "depth");
-		GLint offsetLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "offset");
-		GLint isoLevelLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "isoLevel");
-
-		glUseProgram(_marchingCubesTriCounterComputeShader);
-
-		glUniform1f(frequencyLoc, 0.1f);
-		glUniform1i(widthLoc, width);
-		glUniform1i(heightLoc, height);
-		glUniform1i(depthLoc, depth);
-		glUniform3fv(offsetLoc, 1, &offset[0]);
-		glUniform1f(isoLevelLoc, iso);
-
-		glDispatchCompute((GLuint)ceil(width / 8.0f),
-			(GLuint)ceil(height / 8.0f), (GLuint)ceil(depth / 8.0f));
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
-		int* ptr = (int*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-
-		// Copy or use data
-		int vertexCount = 0;
-		if (ptr) {
-			vertexCount = *ptr;
-			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-		}
-		else {
-			std::cout << "Something went wrong in CreateVertices";
-		}
-		glDeleteBuffers(1, &ssboCounter);
-		return vertexCount;
-	}
+	
 
 	void InitializeVoxelMesh(VoxelMesh& mesh, int width, int height, int depth) {
-		mesh.maxVertexCount = (width - 1) * (height - 1) * (depth - 1) * 15; // 15 is the max number of vertices per cube in marching cubes
-		std::vector<float> zeroData(mesh.maxVertexCount * 3, 0.0f);
 
 		int totalVoxels = width * height * depth;
 
@@ -1386,14 +1336,6 @@ namespace Core {
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.densitySSBO);
 		// Allocate enough space for all the floats, uninitialized (nullptr) is fine since the GPU will fill it
 		glBufferData(GL_SHADER_STORAGE_BUFFER, totalVoxels * sizeof(float), nullptr, GL_STATIC_DRAW);
-
-		glGenBuffers(1, &mesh.vboVertices);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.vboVertices);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, mesh.maxVertexCount * sizeof(float) * 3, zeroData.data(), GL_STATIC_DRAW);
-
-		glGenBuffers(1, &mesh.vboNormals);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.vboNormals);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, mesh.maxVertexCount * sizeof(float) * 3, zeroData.data(), GL_STATIC_DRAW);
 
 
 		glGenBuffers(1, &mesh.indirectBuffer);
@@ -1404,29 +1346,50 @@ namespace Core {
 		glGenVertexArrays(1, &mesh.vao);
 		glBindVertexArray(mesh.vao);
 
-		glBindBuffer(GL_ARRAY_BUFFER, mesh.vboVertices);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-		glEnableVertexAttribArray(0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, mesh.vboNormals);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-		glEnableVertexAttribArray(1);
-
 		glGenBuffers(1, &mesh.stagingIndirect);
 		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingIndirect);
 		glBufferData(GL_COPY_READ_BUFFER, 16, nullptr, GL_STREAM_READ);
 
-		// 2. Allocate Staging Buffer for Vertices (Same size as the VBO)
-		glGenBuffers(1, &mesh.stagingVertices);
-		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingVertices);
-		glBufferData(GL_COPY_READ_BUFFER, mesh.maxVertexCount * sizeof(float) * 3, nullptr, GL_STREAM_READ);
-
-		// 3. Allocate Staging Buffer for Normals (Same size as the VBO)
-		glGenBuffers(1, &mesh.stagingNormals);
-		glBindBuffer(GL_COPY_READ_BUFFER, mesh.stagingNormals);
-		glBufferData(GL_COPY_READ_BUFFER, mesh.maxVertexCount * sizeof(float) * 3, nullptr, GL_STREAM_READ);
-
 		mesh.gpuLoaded = true;
+	}
+
+	void InitializeVoxelMeshSize(VoxelMesh& mesh, int size) {
+		if (size > -1) {
+			mesh.maxVertexCount = size;
+			// 2. Allocate the "Tight" buffers
+			glGenBuffers(1, &mesh.vboVertices);
+			glBindBuffer(GL_ARRAY_BUFFER, mesh.vboVertices);
+			glBufferData(GL_ARRAY_BUFFER, size * sizeof(float) * 3, nullptr, GL_STATIC_DRAW);
+
+			glGenBuffers(1, &mesh.vboNormals);
+			glBindBuffer(GL_ARRAY_BUFFER, mesh.vboNormals);
+			glBufferData(GL_ARRAY_BUFFER, size * sizeof(float) * 3, nullptr, GL_STATIC_DRAW);
+
+			// 3. NOW link them to the VAO
+			glBindVertexArray(mesh.vao);
+
+			glBindBuffer(GL_ARRAY_BUFFER, mesh.vboVertices);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+			glEnableVertexAttribArray(0);
+
+			glBindBuffer(GL_ARRAY_BUFFER, mesh.vboNormals);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+			glEnableVertexAttribArray(1);
+
+			glGenBuffers(1, &mesh.stagingVertices);
+			glBindBuffer(GL_COPY_WRITE_BUFFER, mesh.stagingVertices);
+			glBufferData(GL_COPY_WRITE_BUFFER, size * sizeof(float) * 3, nullptr, GL_STREAM_READ);
+
+			glGenBuffers(1, &mesh.stagingNormals);
+			glBindBuffer(GL_COPY_WRITE_BUFFER, mesh.stagingNormals);
+			glBufferData(GL_COPY_WRITE_BUFFER, size * sizeof(float) * 3, nullptr, GL_STREAM_READ);
+
+			glGenBuffers(1, &mesh.stagingIndirect); // Don't forget this one!
+			glBindBuffer(GL_COPY_WRITE_BUFFER, mesh.stagingIndirect);
+			glBufferData(GL_COPY_WRITE_BUFFER, 16, nullptr, GL_STREAM_READ);
+
+			glBindVertexArray(0);
+		}
 	}
 
 	void StartAsyncReadback(VoxelMesh& mesh) {
@@ -1564,7 +1527,7 @@ namespace Core {
 		memcpy(mesh.cpuMesh.normals.data(), mappedNormals, actualVertexCount * sizeof(glm::vec3));
 		glUnmapBuffer(GL_COPY_READ_BUFFER);
 
-
+		//std::cout << "Successfully read back " << actualVertexCount << " vertices and normals to the CPU." << std::endl;
 		// ==========================================
 		// FIX 2: NUKE THE STAGING BUFFERS
 		// ==========================================
@@ -1605,7 +1568,62 @@ namespace Core {
 		mesh.cpuMesh.isReady = true;
 	}
 
-	void CreateMarchingCubesTriangles(VoxelMesh& mesh, int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso) {
+	int CountMarchingCubesTriangleCount(VoxelMesh& mesh, int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso) {
+
+		GLuint ssboCounter;
+		glGenBuffers(1, &ssboCounter);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
+		// Allocate AND initialize to 0 in one go
+		uint32_t zero = 0;
+		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint32_t), &zero, GL_DYNAMIC_DRAW);
+
+		GLint frequencyLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "frequency");
+		GLint widthLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "width");
+		GLint heightLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "height");
+		GLint depthLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "depth");
+		GLint offsetLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "offset");
+		GLint isoLevelLoc = glGetUniformLocation(_marchingCubesTriCounterComputeShader, "isoLevel");
+
+		glUseProgram(_marchingCubesTriCounterComputeShader);
+
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.densitySSBO);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboCounter);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, GetTriTableSSBO());
+
+
+		glUniform1f(frequencyLoc, 0.1f);
+		glUniform1i(widthLoc, width);
+		glUniform1i(heightLoc, height);
+		glUniform1i(depthLoc, depth);
+		glUniform3fv(offsetLoc, 1, &offset[0]);
+		glUniform1f(isoLevelLoc, iso);
+
+		
+
+
+		glDispatchCompute((GLuint)ceil(width / 8.0f),
+			(GLuint)ceil(height / 8.0f), (GLuint)ceil(depth / 8.0f));
+		glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT | GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
+
+		uint32_t* ptr = (uint32_t*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+
+		// Copy or use data
+		uint32_t vertexCount = 0;
+		if (ptr) {
+			vertexCount = *ptr;
+			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		}
+		else {
+			std::cout << "Something went wrong in CreateVertices";
+		}
+		glDeleteBuffers(1, &ssboCounter);
+		//std::cout << "Estimated Vertex Count: " << vertexCount << std::endl;
+		return vertexCount;
+	}
+
+	void CreateMarchingCubesTriangles(VoxelMesh& mesh, int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso, int count) {
 		
 		uint32_t zero = 0;
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.indirectBuffer);
@@ -1643,10 +1661,6 @@ namespace Core {
 		glMemoryBarrier(GL_COMMAND_BARRIER_BIT |
 			GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT |
 			GL_SHADER_STORAGE_BARRIER_BIT);
-
-		glMemoryBarrier(GL_COMMAND_BARRIER_BIT |
-			GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT |
-			GL_SHADER_STORAGE_BARRIER_BIT);
 	}
 
 	VoxelMesh* CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude, const float frequency, const float persistance, const float lacunarity, const int octaves) {
@@ -1661,7 +1675,13 @@ namespace Core {
 
 		CreateFlat3DNoiseMap(*mesh, paddedWidth, paddedHeight, paddedDepth,offset,CleanUp,amplitude,frequency,persistance,lacunarity,octaves, false);
 		
-		CreateMarchingCubesTriangles(*mesh, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f);
+		int size = CountMarchingCubesTriangleCount(*mesh, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f);
+		
+		InitializeVoxelMeshSize(*mesh, size);
+
+		//std::cout << "Predicted size: " << size << " | Actual size:" << mesh->maxVertexCount << std::endl;
+
+		CreateMarchingCubesTriangles(*mesh, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f, size);
 		
 		glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
