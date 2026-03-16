@@ -20,9 +20,9 @@ void ChunkManager::GenerateChunk(const glm::vec3& position) {
 					//the function call is GPU for the gpu implementtion. Please do keep in mind the noise map is still using compute shaders
 					//even on the cpu implementation, so that is technically a speedup that should not be granted as a possitive for the CPU part
 					//of this code. 
-					Core::VoxelData voxelData = std::move(Core::CreateVoxelCubes3DMesh(_width, _height, _depth, offset, false, _amplitude, _frequency, _persistance, _lacunarity, _octave, true));
-					_chunkMap[coord] = voxelData.meshData;
-					_blockIDs[coord] = voxelData.blockIDs;
+					Core::VoxelCubeMesh* voxelData = std::move(Core::CreateVoxelCubes3DMesh(_width, _height, _depth, offset, false, _amplitude, _frequency, _persistance, _lacunarity, _octave, true));
+					_chunkMap[coord] = voxelData;
+				
 				}
 			}
 	}
@@ -35,8 +35,19 @@ void ChunkManager::DestroyChunks() {
 	_chunkMap.clear();
 }
 
-void ChunkManager::DeleteChunk(Core::PlaneMesh& mesh) {
-	mesh.vertices.clear();
-	mesh.normals.clear();
-	mesh.indices.clear();
+void ChunkManager::DeleteChunk(Core::VoxelCubeMesh* mesh) {
+	if (!mesh) return;
+
+	// Free standard GPU memory
+	if(mesh->blockID_SSBO) glDeleteBuffers(1, &mesh->blockID_SSBO);
+	if (mesh->densitySSBO) glDeleteBuffers(1, &mesh->densitySSBO);
+	if (mesh->splineSSBO) glDeleteBuffers(1, &mesh->splineSSBO);
+	if (mesh->ibo) glDeleteBuffers(1, &mesh->ibo);
+	if (mesh->vbo) glDeleteBuffers(1, &mesh->vbo);
+	if (mesh->vao) glDeleteVertexArrays(1, &mesh->vao);
+	if (mesh->indirectBuffer) glDeleteBuffers(1, &mesh->indirectBuffer);
+	
+
+	// Delete the C++ object from RAM
+	delete mesh;
 }

@@ -52,16 +52,12 @@ public:
 
 	}
 
-	std::unordered_map<ChunkCoord, Core::PlaneMesh>& GetChunkMap() {
+	std::unordered_map<ChunkCoord, Core::VoxelCubeMesh*>& GetChunkMap() {
 		return _chunkMap;
-	}
-	std::unordered_map<ChunkCoord, Core::BlockIds>& GetBlockIDs() {
-		return _blockIDs;
 	}
 
 private:
-	std::unordered_map<ChunkCoord, Core::PlaneMesh> _chunkMap;
-	std::unordered_map<ChunkCoord, Core::BlockIds> _blockIDs;
+	std::unordered_map<ChunkCoord, Core::VoxelCubeMesh*> _chunkMap;
 
 	float _scale = 0.1f;
 	float _amplitude = 1.0f;
@@ -74,6 +70,6 @@ private:
 	int _depth = 16;
 	int _viewDistance = 16;
 
-	void DeleteChunk(Core::PlaneMesh& mesh);
+	void DeleteChunk(Core::VoxelCubeMesh* mesh);
 
 };

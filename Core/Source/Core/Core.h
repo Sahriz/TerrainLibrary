@@ -94,11 +94,11 @@ namespace Core {
 			}
 		}
 	};
-
 	struct VoxelCubeCombinedVertex {
-		glm::vec3 position;
-		glm::vec3 normal;
-		glm::vec2 uv;
+		glm::vec4 position; // 16 bytes
+		glm::vec4 normal;   // 16 bytes
+		glm::vec2 uv;       // 8 bytes
+		float padding[2];   // 8 bytes (Essential to bring the total to 48)
 	};
 	struct VoxelCubeMesh {
 		GLuint vao = 0;
@@ -113,7 +113,7 @@ namespace Core {
 		GLuint stagingVBO = 0;
 		GLuint stagingIBO = 0;
 		GLsync syncObj = nullptr;
-
+		int indexCount = 0;
 		int maxQuards = 0;
 		bool gpuLoaded = false;
 

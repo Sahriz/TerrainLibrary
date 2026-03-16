@@ -13,13 +13,14 @@ layout(std430, binding = 1) buffer CounterBuffer {
 };
 
 uniform int gridWidth; 
-uniform int gridHeight;
+uniform int gridHeigth;
 uniform int gridDepth;
 uniform vec3 offset;
 
-bool IsSolid(int x, int y, int z)
-{
-    int index = x + y * (gridWidth) + z * (gridWidth) * (gridHeight);
+bool IsSolid(int x, int y, int z) {
+    if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeigth || z < 0 || z >= gridDepth) 
+        return false; // Treat out-of-bounds as air
+    int index = x + y * gridWidth + z * gridWidth * gridHeigth;
     return noiseMap[index] >= 0;
 }
 
@@ -29,7 +30,7 @@ void main() {
 
     vec3 paddedNoisePosition = vec3(int(position.x),int(position.y),int(position.z)) + vec3(1,1,1);
     
-    if(paddedNoisePosition.x >= gridWidth-1 || paddedNoisePosition.y >= gridHeight-1 || paddedNoisePosition.z >= gridDepth-1) return;
+    if(paddedNoisePosition.x >= gridWidth-1 || paddedNoisePosition.y >= gridHeigth-1 || paddedNoisePosition.z >= gridDepth-1) return;
     
     if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z))) return;
     

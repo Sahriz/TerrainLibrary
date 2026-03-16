@@ -208,16 +208,17 @@ GLuint Renderer::CreateShaderProgram(const std::string& vertexPath, const std::s
 }
 
 void Renderer::DrawChunks(ChunkManager& chunkManager) {
-	std::unordered_map<ChunkCoord, Core::PlaneMesh>& chunkMap = chunkManager.GetChunkMap();
+	std::unordered_map<ChunkCoord, Core::VoxelCubeMesh*>& chunkMap = chunkManager.GetChunkMap();
 	_chunkRenderer.UpdateActiveChunk(GetCameraPosition(), chunkManager);
 	for (const glm::ivec2& coord : _chunkRenderer.GetActiveChunkSet()) {
-		Core::PlaneMesh& planeData = chunkMap[coord];
+		Core::VoxelCubeMesh& voxelData = *chunkMap[coord];
 		glUseProgram(_shaderProgram);
 		glActiveTexture(GL_TEXTURE0);                     // activate texture unit 0
 		glBindTexture(GL_TEXTURE_2D, textureID);          // bind our texture
 		glUniform1i(_textureUniformLoc, 0);                // tell shader "uTexture" uses GL_TEXTURE0
-		glBindVertexArray(planeData.vao);
-		glDrawElements(GL_TRIANGLES, planeData.indices.size(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(voxelData.vao);
+
+		glDrawElements(GL_TRIANGLES, voxelData.indexCount, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 	}
 }
@@ -284,7 +285,7 @@ void Renderer::Render(ChunkManager& chunkManager) {
 
 	DrawChunks(chunkManager);
 
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	//ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 	glfwSwapBuffers(_window);
 }

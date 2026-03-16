@@ -1723,7 +1723,7 @@ namespace Core {
 
 		CreateFlat3DNoiseMap(*mesh, paddedWidth, paddedHeight, paddedDepth,offset,CleanUp,amplitude,frequency,persistance,lacunarity,octaves, false);
 		AppendBuffer ab;
-		SetupAppendBuffer(ab, paddedWidth, paddedHeight, paddedDepth);
+		SetupAppendBufferVoxelMesh(ab, paddedWidth, paddedHeight, paddedDepth);
 		
 		PerformSurfaceCulling(*mesh, ab, paddedWidth, paddedHeight, paddedDepth, 0.0f);
 
@@ -1767,7 +1767,7 @@ namespace Core {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboCounter);
 
 		GLint widthLoc = glGetUniformLocation(_voxelCubesTriangleCounterComputeShader, "gridWidth");
-		GLint heightLoc = glGetUniformLocation(_voxelCubesTriangleCounterComputeShader, "gridHeight");
+		GLint heightLoc = glGetUniformLocation(_voxelCubesTriangleCounterComputeShader, "gridHeigth");
 		GLint depthLoc = glGetUniformLocation(_voxelCubesTriangleCounterComputeShader, "gridDepth");
 
 		glUseProgram(_voxelCubesTriangleCounterComputeShader);
@@ -1792,17 +1792,7 @@ namespace Core {
 	}
 
 	void VoxelCubesGeometryInit(VoxelCubeMesh& mesh, int width, int heigth, int depth, glm::vec3 offset, int quadCount, bool CleanUp) {
-		std::vector<glm::vec3> vertices;
-		std::vector<glm::vec3> normals;
-		std::vector<int> indices;
-		std::vector<glm::vec2> UVs;
-		
 		int gridSize = width * heigth * depth;
-
-		vertices.resize(quadCount * 4);
-		normals.resize(quadCount * 4);
-		indices.resize(quadCount * 6);
-		UVs.resize(quadCount * 4);
 
 		GLuint ssboIndexCounter;
 		GLuint ssboVertexCounter;
@@ -1816,24 +1806,24 @@ namespace Core {
 
 		glGenBuffers(1, &mesh.ibo);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.ibo);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, 4 * quadCount * sizeof(int), NULL, GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, mesh.ibo);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, 6 * quadCount * sizeof(int), NULL, GL_DYNAMIC_COPY);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, mesh.ibo);
 
 		int initialIndex = 0;
 		glGenBuffers(1, &ssboIndexCounter);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndexCounter);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(int), &initialIndex, GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssboIndexCounter);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssboIndexCounter);
 
 		int initialVertex = 0;
 		glGenBuffers(1, &ssboVertexCounter);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboVertexCounter);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(int), &initialVertex, GL_DYNAMIC_COPY);
-		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, ssboVertexCounter);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssboVertexCounter);
 
 
 		GLint widthLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "gridWidth");
-		GLint heightLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "gridHeight");
+		GLint heigthLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "gridHeigth");
 		GLint depthLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "gridDepth");
 		GLint offsetLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "offset");
 		GLint columnSizeLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "columns");
@@ -1842,7 +1832,7 @@ namespace Core {
 		glUseProgram(_voxelCubesGeometryInitComputeShader);
 
 		glUniform1i(widthLoc, width);
-		glUniform1i(heightLoc, heigth);
+		glUniform1i(heigthLoc, heigth);
 		glUniform1i(depthLoc, depth);
 		glUniform3fv(offsetLoc, 1, &offset[0]);
 		glUniform1f(columnSizeLoc, 3);
@@ -1853,6 +1843,31 @@ namespace Core {
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+		glGenVertexArrays(1, &mesh.vao);
+		glBindVertexArray(mesh.vao);
+
+		glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo);
+		// Position (Location 0)
+
+		int stride = 48;
+		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, (void*)0);
+		glEnableVertexAttribArray(0);
+		// Normal (Location 1)
+		glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, (void*)16);
+		glEnableVertexAttribArray(1);
+		// UV (Location 2)
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)32);
+		glEnableVertexAttribArray(2);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ibo); // Attach indices to VAO
+
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboIndexCounter);
+		int finalIndexCount = 0;
+		glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(int), &finalIndexCount);
+		mesh.indexCount = finalIndexCount;
+
+		glBindVertexArray(0);
 
 	}
 
@@ -1900,6 +1915,7 @@ namespace Core {
 
 
 		int quadCount = VoxelCubesQuadCount(*cubeMeshData, paddedWidth, paddedHeight, paddedDepth, offset3D, CleanUp);
+		std::cout << "Quad Count: " << quadCount << std::endl;
 		VoxelCubesGeometryInit(*cubeMeshData, paddedWidth, paddedHeight, paddedDepth, offset3D, quadCount, CleanUp);
 
 		return cubeMeshData;

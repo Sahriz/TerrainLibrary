@@ -12,9 +12,10 @@ uniform int width;
 uniform int height;
 uniform int depth;
 
-bool IsSolid(int x, int y, int z)
-{
-	int index = x + y * (width) + z * (width) * (height);
+bool IsSolid(int x, int y, int z) {
+    if (x < 0 || x >= width || y < 0 || y >= height || z < 0 || z >= depth) 
+        return false; // Treat out-of-bounds as air
+    int index = x + y * width + z * width * height;
     return blockIDs[index] >= 0;
 }
 
