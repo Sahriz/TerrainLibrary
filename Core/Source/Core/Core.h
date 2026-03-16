@@ -118,15 +118,21 @@ namespace Core {
 		bool gpuLoaded = false;
 
 		~VoxelCubeMesh() {
-			if (gpuLoaded) {
-				glDeleteVertexArrays(1, &vao);
-				glDeleteBuffers(1, &vbo);
-				glDeleteBuffers(1, &ibo);
-				glDeleteBuffers(1, &blockID_SSBO);
-				glDeleteBuffers(1, &stagingVBO);
-				glDeleteBuffers(1, &stagingIBO);
-				if (syncObj) glDeleteSync(syncObj);
-			}
+			if (vao) glDeleteVertexArrays(1, &vao);
+			if (vbo) glDeleteBuffers(1, &vbo);
+			if (ibo) glDeleteBuffers(1, &ibo);
+			if (blockID_SSBO) glDeleteBuffers(1, &blockID_SSBO);
+			if (indirectBuffer) glDeleteBuffers(1, &indirectBuffer);
+			if (densitySSBO) glDeleteBuffers(1, &densitySSBO);
+			if (splineSSBO) glDeleteBuffers(1, &splineSSBO);
+			if (stagingVBO) glDeleteBuffers(1, &stagingVBO);
+			if (stagingIBO) glDeleteBuffers(1, &stagingIBO);
+			if (syncObj) glDeleteSync(syncObj);
+
+			vao = vbo = ibo = blockID_SSBO = indirectBuffer = densitySSBO = splineSSBO = stagingVBO = stagingIBO = 0;
+			syncObj = nullptr;
+			gpuLoaded = false;
+			
 		}
 	};
 
@@ -155,7 +161,7 @@ namespace Core {
 	extern GLuint _smoothMarchingCubesVertCreatorComputeShader;
 	extern GLuint _voxelCubesTriangleCounterComputeShader;
 	extern GLuint _voxelTerrainPainterComputeShader;
-
+	extern GLuint _voxelCubesSurfaceCullingComputeShader;
 
 	void Init();
 	void Cleanup();
@@ -185,12 +191,14 @@ namespace Core {
 	VoxelMesh* CreateMarchingCubes3DMeshGPU(int width, int height, int depth, glm::vec3 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5);
 	void StartAsyncReadback(VoxelMesh& mesh);
 	bool PollAsyncReadback(VoxelMesh& mesh);
+	void PerformVoxelSurfaceCulling(VoxelMesh& mesh, AppendBuffer& ab, int width, int height, int depth, float isoLevel);
 
 
 	void SetupAppendBuffer(AppendBuffer& ab, int width, int height, int depth);
 	void StartAsyncReadback(VoxelCubeMesh& mesh);
 	bool PollAsyncReadback(VoxelCubeMesh& mesh);
-	int VoxelCubesQuadCount(VoxelCubeMesh& mesh, int width, int heigth, int depth, glm::vec3 offset, bool CleanUp);
-	void VoxelCubesGeometryInit(VoxelCubeMesh& planeData, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp);
+	void PerformVoxelCubesSurfaceCulling(VoxelCubeMesh& mesh, AppendBuffer& ab, int width, int height, int depth, float isoLevel);
+	int VoxelCubesQuadCount(VoxelCubeMesh& mesh, AppendBuffer& ab, int width, int heigth, int depth, glm::vec3 offset, bool CleanUp);
+	void VoxelCubesGeometryInit(VoxelCubeMesh& mesh, AppendBuffer& ab, int width, int heigth, int depth, glm::vec3 offset, const BlockIds& blockIDs, bool CleanUp);
 	VoxelCubeMesh* CreateVoxelCubes3DMesh(int width, int heigth, int depth, glm::vec2 offset, bool CleanUp, const float amplitude = 1.0f, const float frequency = 1.0f, const float persistance = 0.5f, const float lacunarity = 2.0f, const int octaves = 5, const bool useDropoff = true);
 }

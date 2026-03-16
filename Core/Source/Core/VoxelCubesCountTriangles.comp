@@ -1,7 +1,7 @@
 #version 430 core
 
 // Compute shader - one thread per cube
-layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+layout(local_size_x = 64) in;
 
 layout(std430, binding = 0) buffer noiseBuffer {
     int noiseMap[];
@@ -12,53 +12,60 @@ layout(std430, binding = 1) buffer CounterBuffer {
     int counter;  
 };
 
+layout(std430, binding = 2) buffer TotalActiveCount {
+	uint totalActiveCount;
+};
+
+layout(std430, binding = 3) buffer ActiveVoxelList { uint activeVoxels[]; };
+
 uniform int gridWidth; 
 uniform int gridHeigth;
 uniform int gridDepth;
 uniform vec3 offset;
 
 bool IsSolid(int x, int y, int z) {
-    if (x < 0 || x >= gridWidth || y < 0 || y >= gridHeigth || z < 0 || z >= gridDepth) 
-        return false; // Treat out-of-bounds as air
     int index = x + y * gridWidth + z * gridWidth * gridHeigth;
     return noiseMap[index] >= 0;
 }
 
 void main() {
-    
-    vec3 position = gl_GlobalInvocationID.xyz;
+    uint listIdx = gl_GlobalInvocationID.x;
 
-    vec3 paddedNoisePosition = vec3(int(position.x),int(position.y),int(position.z)) + vec3(1,1,1);
-    
-    if(paddedNoisePosition.x >= gridWidth-1 || paddedNoisePosition.y >= gridHeigth-1 || paddedNoisePosition.z >= gridDepth-1) return;
-    
-    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z))) return;
-    
-    vec3 base = vec3(int(paddedNoisePosition.x),int(paddedNoisePosition.y),int(paddedNoisePosition.z)) + vec3(offset.x, offset.y, offset.z);
-    
-    if (!IsSolid(int(paddedNoisePosition.x) + 1, int(paddedNoisePosition.y), int(paddedNoisePosition.z)))
-    {
-        atomicAdd(counter, 1);
-    }
-    if (!IsSolid(int(paddedNoisePosition.x) - 1, int(paddedNoisePosition.y), int(paddedNoisePosition.z)))
-    {
-        atomicAdd(counter, 1);
-    }
+	if (listIdx >= totalActiveCount) return;
 
-    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y) + 1, int(paddedNoisePosition.z)))
+	uint packedID = activeVoxels[listIdx];
+	vec3 position;
+	position.x = float(packedID & 0x3FF);
+    position.y = float((packedID >> 10) & 0x3FF);
+    position.z = float((packedID >> 20) & 0x3FF);    
+
+    if (!IsSolid(int(position.x), int(position.y), int(position.z))) return;
+    
+    vec3 base = vec3(int(position.x),int(position.y),int(position.z)) + vec3(offset.x, offset.y, offset.z);
+    
+    if (!IsSolid(int(position.x) + 1, int(position.y), int(position.z)))
     {
         atomicAdd(counter, 1);
     }
-    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y) - 1, int(paddedNoisePosition.z)))
+    if (!IsSolid(int(position.x) - 1, int(position.y), int(position.z)))
     {
         atomicAdd(counter, 1);
     }
 
-    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z) + 1))
+    if (!IsSolid(int(position.x), int(position.y) + 1, int(position.z)))
     {
         atomicAdd(counter, 1);
     }
-    if (!IsSolid(int(paddedNoisePosition.x), int(paddedNoisePosition.y), int(paddedNoisePosition.z) - 1))
+    if (!IsSolid(int(position.x), int(position.y) - 1, int(position.z)))
+    {
+        atomicAdd(counter, 1);
+    }
+
+    if (!IsSolid(int(position.x), int(position.y), int(position.z) + 1))
+    {
+        atomicAdd(counter, 1);
+    }
+    if (!IsSolid(int(position.x), int(position.y), int(position.z) - 1))
     {
         atomicAdd(counter, 1);
     }

@@ -27,7 +27,7 @@ public:
 	void Update(const glm::vec3& position);
 
 	void GenerateChunk(const glm::vec3& position);
-
+	void PruneChunks(const glm::vec3& position);
 	glm::vec2 GetChunkCoordFromPosition(const glm::vec3& position) const {
 		float xScale = 1.0f / _width;
 		float zScale = 1.0f / _depth;

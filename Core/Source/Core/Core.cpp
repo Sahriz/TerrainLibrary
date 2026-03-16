@@ -894,6 +894,7 @@ namespace Core {
 	GLuint _voxelCubesGeometryInitComputeShader = 0;
 	GLuint _voxelCubesTriangleCounterComputeShader = 0;
 	GLuint _voxelTerrainPainterComputeShader = 0;
+	GLuint _voxelCubesSurfaceCullingComputeShader = 0;
 	
 
 	void Init() {
@@ -909,7 +910,7 @@ namespace Core {
 		_voxelCubesGeometryInitComputeShader = CreateComputeShaderProgram("../Core/Source/Core/VoxelCubesGeometryInit.comp");
 		_voxelCubesTriangleCounterComputeShader = CreateComputeShaderProgram("../Core/Source/Core/VoxelCubesCountTriangles.comp");
 		_voxelTerrainPainterComputeShader = CreateComputeShaderProgram("../Core/Source/Core/VoxelTerrainPainter.comp");
-
+		_voxelCubesSurfaceCullingComputeShader = CreateComputeShaderProgram("../Core/Source/Core/VoxelCubesSurfaceCulling.comp");
 	}
 
 	void Cleanup() {
@@ -925,6 +926,7 @@ namespace Core {
 		glDeleteProgram(_voxelCubesGeometryInitComputeShader);
 		glDeleteProgram(_voxelCubesTriangleCounterComputeShader);
 		glDeleteProgram(_voxelTerrainPainterComputeShader);
+		glDeleteProgram(_voxelCubesSurfaceCullingComputeShader);
 
 	}
 
@@ -1563,7 +1565,7 @@ namespace Core {
 	}
 
 	// This is the new step you need to insert into CreateMarchingCubes3DMeshGPU
-	void PerformSurfaceCulling(VoxelMesh& mesh, AppendBuffer& ab, int width, int height, int depth, float isoLevel) {
+	void PerformVoxelSurfaceCulling(VoxelMesh& mesh, AppendBuffer& ab, int width, int height, int depth, float isoLevel) {
 
 		// 1. Reset the AppendBuffer counter to 0 so we start fresh for this chunk
 		uint32_t zero = 0;
@@ -1725,7 +1727,7 @@ namespace Core {
 		AppendBuffer ab;
 		SetupAppendBufferVoxelMesh(ab, paddedWidth, paddedHeight, paddedDepth);
 		
-		PerformSurfaceCulling(*mesh, ab, paddedWidth, paddedHeight, paddedDepth, 0.0f);
+		PerformVoxelSurfaceCulling(*mesh, ab, paddedWidth, paddedHeight, paddedDepth, 0.0f);
 
 		int size = CountMarchingCubesTriangleCount(*mesh, ab, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f);
 		
@@ -1754,7 +1756,40 @@ namespace Core {
 		return p1 + mu * (p2 - p1);
 	}
 
-	int VoxelCubesQuadCount(VoxelCubeMesh& mesh, int width, int heigth, int depth, glm::vec3 offset, bool CleanUp) {
+	void PerformVoxelCubesSurfaceCulling(VoxelCubeMesh& mesh, AppendBuffer& ab, int width, int height, int depth, float isoLevel) {
+		// 1. Reset the AppendBuffer counter to 0 so we start fresh for this chunk
+		uint32_t zero = 0;
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ab.counterSSBO);
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &zero);
+
+		// 2. Memory Barrier: Ensure the Noise Map is finished before we read it
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+		// 3. Bind the Culling Shader and its buffers
+		glUseProgram(_voxelCubesSurfaceCullingComputeShader);
+
+		// Binding 0: The Noise Density (Input)
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.blockID_SSBO);
+		// Binding 1: The AppendBuffer Counter (Output)
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ab.counterSSBO);
+		// Binding 2: The AppendBuffer Data List (Output)
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ab.dataSSBO);
+
+		// 4. Set Uniforms
+		glUniform1i(glGetUniformLocation(_voxelCubesSurfaceCullingComputeShader, "width"), width);
+		glUniform1i(glGetUniformLocation(_voxelCubesSurfaceCullingComputeShader, "height"), height);
+		glUniform1i(glGetUniformLocation(_voxelCubesSurfaceCullingComputeShader, "depth"), depth);
+
+		// 5. Dispatch: One thread per voxel
+		glDispatchCompute((GLuint)ceil(width / 8.0f),
+			(GLuint)ceil(height / 8.0f),
+			(GLuint)ceil(depth / 8.0f));
+
+		// 6. Memory Barrier: Ensure the Active List is built before the Counting step starts
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+	}
+
+	int VoxelCubesQuadCount(VoxelCubeMesh& mesh, AppendBuffer& ab, int width, int heigth, int depth, glm::vec3 offset, bool CleanUp) {
 		
 
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.blockID_SSBO);
@@ -1766,6 +1801,9 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(int), &initial, GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboCounter);
 
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ab.counterSSBO);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ab.dataSSBO);
+
 		GLint widthLoc = glGetUniformLocation(_voxelCubesTriangleCounterComputeShader, "gridWidth");
 		GLint heightLoc = glGetUniformLocation(_voxelCubesTriangleCounterComputeShader, "gridHeigth");
 		GLint depthLoc = glGetUniformLocation(_voxelCubesTriangleCounterComputeShader, "gridDepth");
@@ -1776,8 +1814,17 @@ namespace Core {
 		glUniform1i(heightLoc, heigth);
 		glUniform1i(depthLoc, depth);
 
-		glDispatchCompute((GLuint)ceil((width) / 8.0f),
-			(GLuint)ceil((heigth) / 8.0f), (GLuint)ceil((depth) / 8.0f));
+		uint32_t activeCount = 0;
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ab.counterSSBO);
+		glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &activeCount);
+		// 2. Only dispatch if there is actually something to draw
+		if (activeCount > 0) {
+			// We use a 1D dispatch. 
+			// Since local_size_x = 64, we divide the total count by 64.
+			GLuint numGroups = (activeCount + 63) / 64;
+			
+			glDispatchCompute(numGroups, 1, 1);
+		}
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
@@ -1788,14 +1835,19 @@ namespace Core {
 			vertexCount = *ptr;
 			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 		}
+		glDeleteBuffers(1, &ssboCounter);
 		return vertexCount;
 	}
 
-	void VoxelCubesGeometryInit(VoxelCubeMesh& mesh, int width, int heigth, int depth, glm::vec3 offset, int quadCount, bool CleanUp) {
+	void VoxelCubesGeometryInit(VoxelCubeMesh& mesh, AppendBuffer& ab, int width, int heigth, int depth, glm::vec3 offset, int quadCount, bool CleanUp) {
 		int gridSize = width * heigth * depth;
 
 		GLuint ssboIndexCounter;
 		GLuint ssboVertexCounter;
+
+		if (mesh.vao) { glDeleteVertexArrays(1, &mesh.vao); mesh.vao = 0; }
+		if (mesh.vbo) { glDeleteBuffers(1, &mesh.vbo); mesh.vbo = 0; }
+		if (mesh.ibo) { glDeleteBuffers(1, &mesh.ibo); mesh.ibo = 0; }
 
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.blockID_SSBO);
 
@@ -1821,6 +1873,9 @@ namespace Core {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(int), &initialVertex, GL_DYNAMIC_COPY);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssboVertexCounter);
 
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, ab.counterSSBO);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, ab.dataSSBO);
+
 
 		GLint widthLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "gridWidth");
 		GLint heigthLoc = glGetUniformLocation(_voxelCubesGeometryInitComputeShader, "gridHeigth");
@@ -1838,8 +1893,18 @@ namespace Core {
 		glUniform1f(columnSizeLoc, 3);
 		glUniform1f(rowSizeLoc, 16);
 
-		glDispatchCompute((GLuint)ceil((width) / 8.0f),
-			(GLuint)ceil((heigth) / 8.0f), (GLuint)ceil((depth) / 8.0f));
+		uint32_t activeCount = 0;
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ab.counterSSBO);
+		glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &activeCount);
+
+		// 2. Only dispatch if there is actually something to draw
+		if (activeCount > 0) {
+			// We use a 1D dispatch. 
+			// Since local_size_x = 64, we divide the total count by 64.
+			GLuint numGroups = (activeCount + 63) / 64;
+			std::cout << activeCount << std::endl;
+			glDispatchCompute(numGroups, 1, 1);
+		}
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
 		glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
@@ -1868,6 +1933,9 @@ namespace Core {
 		mesh.indexCount = finalIndexCount;
 
 		glBindVertexArray(0);
+
+		glDeleteBuffers(1, &ssboIndexCounter);
+		glDeleteBuffers(1, &ssboVertexCounter);
 
 	}
 
@@ -1913,10 +1981,19 @@ namespace Core {
 		CreateFlat3DNoiseMapPipeLine(*cubeMeshData, spline, paddedWidth, paddedHeight, paddedDepth, offset3D, true, frequency, true);
 		TerrainPaint(*cubeMeshData, paddedWidth, paddedHeight, paddedDepth);
 
+		AppendBuffer ab;
+		SetupAppendBufferVoxelMesh(ab, paddedWidth, paddedHeight, paddedDepth);
+		
+		PerformVoxelCubesSurfaceCulling(*cubeMeshData, ab, paddedWidth, paddedHeight, paddedDepth, 0.0f);
 
-		int quadCount = VoxelCubesQuadCount(*cubeMeshData, paddedWidth, paddedHeight, paddedDepth, offset3D, CleanUp);
-		std::cout << "Quad Count: " << quadCount << std::endl;
-		VoxelCubesGeometryInit(*cubeMeshData, paddedWidth, paddedHeight, paddedDepth, offset3D, quadCount, CleanUp);
+		int quadCount = VoxelCubesQuadCount(*cubeMeshData, ab, paddedWidth, paddedHeight, paddedDepth, offset3D, CleanUp);
+		//std::cout << "Quad Count: " << quadCount << std::endl;
+		VoxelCubesGeometryInit(*cubeMeshData, ab, paddedWidth, paddedHeight, paddedDepth, offset3D, quadCount, CleanUp);
+		glDeleteBuffers(1, &cubeMeshData->stagingVBO);
+		glDeleteBuffers(1, &cubeMeshData->stagingIBO);
+		glDeleteBuffers(1, &ab.counterSSBO);
+		glDeleteBuffers(1, &ab.dataSSBO);
+		glDeleteBuffers(1, &cubeMeshData->splineSSBO);
 
 		return cubeMeshData;
 	}

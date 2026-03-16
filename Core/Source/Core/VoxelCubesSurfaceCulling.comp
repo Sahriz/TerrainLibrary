@@ -1,0 +1,58 @@
+#version 430 core
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+layout(std430, binding = 0) buffer DensityBuffer{
+    int blockIDs[];
+};
+
+// The counter that tracks how many items we've added
+layout(std430, binding = 1) buffer CounterBuffer {
+    uint activeVoxelCount;
+};
+
+// The actual list of voxel IDs
+layout(std430, binding = 2) buffer ActiveVoxelList {
+    uint activeVoxels[];
+};
+
+uniform int width;
+uniform int height;
+uniform int depth;
+
+
+
+bool IsAir(int x, int y, int z)
+{
+    int index = x + y * (width) + z * (width) * (height);
+    return blockIDs[index] < 0;
+}
+
+void main(){
+    ivec3 position = ivec3(gl_GlobalInvocationID.xyz);
+    
+    if (position.x >= width-2 || position.y >= height-2 || position.z >= depth-2)
+        return;
+    ivec3 pos = position + ivec3(1,1,1);
+    int centerIdx = pos.x + pos.y * width + pos.z * width * height;
+    int centerID = blockIDs[centerIdx];
+
+    // Only process solid blocks
+    if (centerID >= 0) {
+        // Check 6 neighbors (Face Culling Logic)
+        bool isSurface = IsAir(pos.x + 1, pos.y, pos.z) ||
+                         IsAir(pos.x - 1, pos.y, pos.z) ||
+                         IsAir(pos.x, pos.y + 1, pos.z) ||
+                         IsAir(pos.x, pos.y - 1, pos.z) ||
+                         IsAir(pos.x, pos.y, pos.z + 1) ||
+                         IsAir(pos.x, pos.y, pos.z - 1);
+
+        if (isSurface) {
+            uint listIdx = atomicAdd(activeVoxelCount, 1);
+            
+            // Using your same packing logic: 10 bits per axis
+            uint packedID = uint(pos.x) | (uint(pos.y) << 10) | (uint(pos.z) << 20);
+            activeVoxels[listIdx] = packedID;
+        }
+    }
+}

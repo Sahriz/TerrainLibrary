@@ -2,6 +2,7 @@
 
 void ChunkManager::Update(const glm::vec3& position) {
 	GenerateChunk(position);
+	//PruneChunks(position);
 }
 
 void ChunkManager::GenerateChunk(const glm::vec3& position) {
@@ -25,6 +26,23 @@ void ChunkManager::GenerateChunk(const glm::vec3& position) {
 				
 				}
 			}
+	}
+	
+}
+
+void ChunkManager::PruneChunks(const glm::vec3& position) {
+	glm::vec2 playerChunk = GetChunkCoordFromPosition(position);
+	float maxDist = _viewDistance + 2.0f; // Buffer zone
+
+	for (auto it = _chunkMap.begin(); it != _chunkMap.end(); ) {
+		float dist = glm::distance(playerChunk, it->first);
+		if (dist > maxDist) {
+			DeleteChunk(it->second); // This calls glDeleteBuffers
+			it = _chunkMap.erase(it); // Remove from map
+		}
+		else {
+			++it;
+		}
 	}
 }
 
