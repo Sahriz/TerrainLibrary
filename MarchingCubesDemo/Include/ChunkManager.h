@@ -73,14 +73,14 @@ private:
 	std::vector<glm::vec3> _chunkCoordsToGenerateToCPU;
 	float _scale = 0.1f;
 	float _amplitude = 1.0f;
-	float _frequency = 0.06f;
+	float _frequency = 0.08f;
 	int _octave = 5;
 	float _lacunarity = 2.0f;
 	float _persistance = 0.5f;
 	int _width = 16;
 	int _height = 16;
 	int _depth = 16;
-	int _viewDistance = 6;
+	int _viewDistance = 5;
 	void UnloadFarChunks(const glm::vec3& playerPosition);
 	void DeleteChunk(Core::VoxelMesh* mesh);
 

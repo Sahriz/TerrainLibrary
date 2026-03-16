@@ -888,11 +888,13 @@ namespace Core {
 	GLuint _normalInterpelationComputeShaderProgram = 0;
 	GLuint _3dNoiseMapComputeShader = 0;
 	GLuint _3DNoiseMapPipelineComputeShader = 0;
+	GLuint _marchingCubesSurfaceCullingComputeShader = 0;
 	GLuint _marchingCubesTriCounterComputeShader = 0;
 	GLuint _marchingCubesTriCreatorComputeShader = 0;
 	GLuint _voxelCubesGeometryInitComputeShader = 0;
 	GLuint _voxelCubesTriangleCounterComputeShader = 0;
 	GLuint _voxelTerrainPainterComputeShader = 0;
+	
 
 	void Init() {
 		_vertexInitComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapVertexInit.comp");
@@ -901,6 +903,7 @@ namespace Core {
 		_normalInterpelationComputeShaderProgram = CreateComputeShaderProgram("../Core/Source/Core/HeightMapNormal.comp");
 		_3dNoiseMapComputeShader = CreateComputeShaderProgram("../Core/Source/Core/Create3DNoise.comp");
 		_3DNoiseMapPipelineComputeShader = CreateComputeShaderProgram("../Core/Source/Core/3DVoxelCubeNoise.comp");
+		_marchingCubesSurfaceCullingComputeShader = CreateComputeShaderProgram("../Core/Source/Core/MarchingCubesSurfaceCulling.comp");
 		_marchingCubesTriCounterComputeShader = CreateComputeShaderProgram("../Core/Source/Core/MarchingCubesCountTris.comp");
 		_marchingCubesTriCreatorComputeShader = CreateComputeShaderProgram("../Core/Source/Core/MarchingCubesCreateTris.comp");
 		_voxelCubesGeometryInitComputeShader = CreateComputeShaderProgram("../Core/Source/Core/VoxelCubesGeometryInit.comp");
@@ -916,6 +919,7 @@ namespace Core {
 		glDeleteProgram(_normalInterpelationComputeShaderProgram);
 		glDeleteProgram(_3dNoiseMapComputeShader);
 		glDeleteProgram(_3DNoiseMapPipelineComputeShader);
+		glDeleteProgram(_marchingCubesSurfaceCullingComputeShader);
 		glDeleteProgram(_marchingCubesTriCounterComputeShader);
 		glDeleteProgram(_marchingCubesTriCreatorComputeShader);
 		glDeleteProgram(_voxelCubesGeometryInitComputeShader);
@@ -1384,12 +1388,34 @@ namespace Core {
 			glBindBuffer(GL_COPY_WRITE_BUFFER, mesh.stagingNormals);
 			glBufferData(GL_COPY_WRITE_BUFFER, size * sizeof(float) * 3, nullptr, GL_STREAM_READ);
 
-			glGenBuffers(1, &mesh.stagingIndirect); // Don't forget this one!
-			glBindBuffer(GL_COPY_WRITE_BUFFER, mesh.stagingIndirect);
-			glBufferData(GL_COPY_WRITE_BUFFER, 16, nullptr, GL_STREAM_READ);
-
 			glBindVertexArray(0);
 		}
+	}
+	void SetupAppendBuffer(AppendBuffer& ab, int width, int height, int depth) {
+		ab.maxCapacity = width * height * depth;
+
+		// 1. Setup Counter (just 4 bytes)
+		glGenBuffers(1, &ab.counterSSBO);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ab.counterSSBO);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint32_t), nullptr, GL_DYNAMIC_DRAW);
+
+		// 2. Setup Data List
+		glGenBuffers(1, &ab.dataSSBO);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ab.dataSSBO);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, ab.maxCapacity * sizeof(uint32_t), nullptr, GL_STATIC_DRAW);
+	}
+
+	void ClearAndBindAppendBuffer(AppendBuffer& ab) {
+		// Reset counter to 0
+		uint32_t zero = 0;
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ab.counterSSBO);
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &zero);
+
+		// Bind to the binding points defined in the shader
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ab.counterSSBO);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ab.dataSSBO);
+
+
 	}
 
 	void StartAsyncReadback(VoxelMesh& mesh) {
@@ -1568,7 +1594,57 @@ namespace Core {
 		mesh.cpuMesh.isReady = true;
 	}
 
-	int CountMarchingCubesTriangleCount(VoxelMesh& mesh, int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso) {
+	// This is the new step you need to insert into CreateMarchingCubes3DMeshGPU
+	void PerformSurfaceCulling(VoxelMesh& mesh, AppendBuffer& ab, int width, int height, int depth, float isoLevel) {
+
+		// 1. Reset the AppendBuffer counter to 0 so we start fresh for this chunk
+		uint32_t zero = 0;
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ab.counterSSBO);
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(uint32_t), &zero);
+
+		// 2. Memory Barrier: Ensure the Noise Map is finished before we read it
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+		// 3. Bind the Culling Shader and its buffers
+		glUseProgram(_marchingCubesSurfaceCullingComputeShader);
+
+		// Binding 0: The Noise Density (Input)
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.densitySSBO);
+		// Binding 1: The AppendBuffer Counter (Output)
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ab.counterSSBO);
+		// Binding 2: The AppendBuffer Data List (Output)
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ab.dataSSBO);
+
+		// 4. Set Uniforms
+		glUniform1i(glGetUniformLocation(_marchingCubesSurfaceCullingComputeShader, "width"), width);
+		glUniform1i(glGetUniformLocation(_marchingCubesSurfaceCullingComputeShader, "height"), height);
+		glUniform1i(glGetUniformLocation(_marchingCubesSurfaceCullingComputeShader, "depth"), depth);
+		glUniform1f(glGetUniformLocation(_marchingCubesSurfaceCullingComputeShader, "isoLevel"), isoLevel);
+
+		// 5. Dispatch: One thread per voxel
+		glDispatchCompute((GLuint)ceil(width / 8.0f),
+			(GLuint)ceil(height / 8.0f),
+			(GLuint)ceil(depth / 8.0f));
+
+		// 6. Memory Barrier: Ensure the Active List is built before the Counting step starts
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+	}
+
+	int GetActiveCountFromGPU(AppendBuffer& ab) {
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ab.counterSSBO);
+		uint32_t* ptr = (uint32_t*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+		uint32_t activeCount = 0;
+		if (ptr) {
+			activeCount = *ptr;
+			glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+		}
+		else {
+			std::cout << "Something went wrong in GetActiveCounterFromGPU";
+		}
+		return activeCount;
+	}
+
+	int CountMarchingCubesTriangleCount(VoxelMesh& mesh, AppendBuffer& ab, int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso) {
 
 		GLuint ssboCounter;
 		glGenBuffers(1, &ssboCounter);
@@ -1589,6 +1665,8 @@ namespace Core {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, mesh.densitySSBO);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ssboCounter);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, GetTriTableSSBO());
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ab.counterSSBO);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ab.dataSSBO);
 
 
 		glUniform1f(frequencyLoc, 0.1f);
@@ -1601,8 +1679,8 @@ namespace Core {
 		
 
 
-		glDispatchCompute((GLuint)ceil(width / 8.0f),
-			(GLuint)ceil(height / 8.0f), (GLuint)ceil(depth / 8.0f));
+		int activeCount = GetActiveCountFromGPU(ab); 
+		glDispatchCompute((GLuint)ceil(activeCount / 64.0f), 1, 1);
 		glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT | GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
 
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssboCounter);
@@ -1623,7 +1701,7 @@ namespace Core {
 		return vertexCount;
 	}
 
-	void CreateMarchingCubesTriangles(VoxelMesh& mesh, int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso, int count) {
+	void CreateMarchingCubesTriangles(VoxelMesh& mesh, AppendBuffer& ab, int width, int height, int depth, glm::vec3 offset, bool CleanUp, float iso, int count) {
 		
 		uint32_t zero = 0;
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, mesh.indirectBuffer);
@@ -1640,6 +1718,8 @@ namespace Core {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, mesh.vboNormals);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, mesh.indirectBuffer);
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, GetTriTableSSBO());
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, ab.counterSSBO);
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, ab.dataSSBO);
 		
 		GLint frequencyLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "frequency");
 		GLint widthLoc = glGetUniformLocation(_marchingCubesTriCreatorComputeShader, "width");
@@ -1655,8 +1735,8 @@ namespace Core {
 		glUniform3fv(offsetLoc, 1, &offset[0]);
 		glUniform1f(isoLevelLoc, iso);
 
-		glDispatchCompute((GLuint)ceil(width / 8.0f),
-			(GLuint)ceil(height / 8.0f), (GLuint)ceil(depth / 8.0f));
+		int activeCount = GetActiveCountFromGPU(ab);
+		glDispatchCompute((GLuint)ceil(activeCount / 64.0f), 1, 1);
 
 		glMemoryBarrier(GL_COMMAND_BARRIER_BIT |
 			GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT |
@@ -1674,14 +1754,18 @@ namespace Core {
 		InitializeVoxelMesh(*mesh, paddedWidth, paddedHeight, paddedDepth);
 
 		CreateFlat3DNoiseMap(*mesh, paddedWidth, paddedHeight, paddedDepth,offset,CleanUp,amplitude,frequency,persistance,lacunarity,octaves, false);
+		AppendBuffer ab;
+		SetupAppendBuffer(ab, paddedWidth, paddedHeight, paddedDepth);
 		
-		int size = CountMarchingCubesTriangleCount(*mesh, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f);
+		PerformSurfaceCulling(*mesh, ab, paddedWidth, paddedHeight, paddedDepth, 0.0f);
+
+		int size = CountMarchingCubesTriangleCount(*mesh, ab, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f);
 		
 		InitializeVoxelMeshSize(*mesh, size);
 
 		//std::cout << "Predicted size: " << size << " | Actual size:" << mesh->maxVertexCount << std::endl;
 
-		CreateMarchingCubesTriangles(*mesh, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f, size);
+		CreateMarchingCubesTriangles(*mesh, ab, paddedWidth, paddedHeight, paddedDepth, offset, CleanUp, 0.0f, size);
 		
 		glMemoryBarrier(GL_ALL_BARRIER_BITS);
 

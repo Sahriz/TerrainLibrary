@@ -1,24 +1,20 @@
 #version 430 core
 
-layout(local_size_x = 64) in;
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
-layout(std430, binding = 0) buffer DensityBuffer {
+layout(std430, binding = 0) buffer DensityBuffer{
     float densities[];
 };
 
-layout(std430, binding = 1) buffer IndirectBuffer {
-    uint count;         // Number of vertices to draw
+// The counter that tracks how many items we've added
+layout(std430, binding = 1) buffer CounterBuffer {
+    uint activeVoxelCount;
 };
 
-layout(std430, binding = 2) buffer TriTableBuffer{
-    int triTable[];
+// The actual list of voxel IDs
+layout(std430, binding = 2) buffer ActiveVoxelList {
+    uint activeVoxels[];
 };
-
-layout(std430, binding = 3) buffer TotalActiveCount {
-	uint totalActiveCount;
-};
-
-layout(std430, binding = 4) buffer ActiveVoxelList { uint activeVoxels[]; };
 
 uniform float frequency;
 uniform int width;
@@ -74,42 +70,36 @@ const int edgeTable[] =  {
 				0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0   };
 
 
+
+
+bool isSurfaceVoxel(vec3 pos) {
+	int cubeIndex = 0;
+	float cornerValues[8];
+	for (int i = 0; i < 8; i++) {
+		vec3 cornerPos = pos + cornerOffsets[i];
+		uint index = uint(cornerPos.x + (cornerPos.y * width) + (cornerPos.z * width * height));
+		cornerValues[i] = densities[index];
+		if (cornerValues[i] < isoLevel) {
+			cubeIndex |= (1 << i);
+		}
+	}
+	return edgeTable[cubeIndex] != 0;
+}
+
 void main(){
-	uint listIdx = gl_GlobalInvocationID.x;
+    vec3 Pos = gl_GlobalInvocationID;
 
-	if (listIdx >= totalActiveCount) return;
-
-	uint packedID = activeVoxels[listIdx];
-	vec3 Pos;
-	Pos.x = float(packedID & 0x3FF);
-    Pos.y = float((packedID >> 10) & 0x3FF);
-    Pos.z = float((packedID >> 20) & 0x3FF);
-	vec3 cubeCorners[8];
-    float cubeValues[8];
-	for (int i = 0; i < 8; i++)
-    {
-        vec3 cornerPos = Pos + cornerOffsets[i];
-        uint cornerIndex = uint(cornerPos.x + (cornerPos.y * width) + (cornerPos.z * width * height));
-        cubeCorners[i] = cornerPos + offset; // optionally scale it
-
-        cubeValues[i] = densities[cornerIndex];
-    }
-
-// 2. Calculate cubeIndex
-    int cubeIndex = 0;
-    for (int t = 0; t < 8; t++)
-    {
-        if (cubeValues[t] < isoLevel)
-            cubeIndex |= (1 << t);
-    }
-    
-    if (edgeTable[cubeIndex] == 0)
+	 if (Pos.x >= uint(width-1) || Pos.y >= uint(height-1) || Pos.z >= uint(depth-1))
         return;
 
-// 3. Count triangles
-    int triIndexBase = cubeIndex * 16;
-    for (int q = 0; triTable[triIndexBase + q] != -1; q += 3)
-    {
-       atomicAdd(count, 9);
-    }
+    uint voxelIndex = uint(Pos.x + (Pos.y * width) + (Pos.z * width * height));
+	
+	bool isSurface = isSurfaceVoxel(Pos);
+	if(isSurface) {
+		uint count = atomicAdd(activeVoxelCount, 1);
+		// Pack into 10-bit chunks (supports up to 1024x1024x1024)
+		uint packedID = uint(Pos.x) | (uint(Pos.y) << 10) | (uint(Pos.z) << 20);
+		activeVoxels[count] = packedID;
+	}
+	
 }
